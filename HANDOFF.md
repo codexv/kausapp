@@ -68,6 +68,19 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Fix "app is damaged" (ad-hoc signing) → v0.1.1
+- User hit **"Kausapp is damaged and can't be opened"** when installing the downloaded dmg. Cause:
+  the app was **entirely unsigned**; macOS (esp. Apple Silicon) flags unsigned quarantined downloads
+  as "damaged".
+- **Immediate workaround given to user:** `xattr -dr com.apple.quarantine /Applications/Kausapp.app`.
+- **Build fix:** added `build/afterPack.js` (referenced via `build.afterPack`) that **ad-hoc signs**
+  the macOS `.app` (`codesign --force --deep --sign -`). Verified locally → `Signature=adhoc`. This
+  downgrades the error from "damaged" to the milder "unidentified developer" (right-click → Open).
+- **Still NOT fully fixed:** removing the warning entirely needs a paid Apple Developer ID +
+  notarization. Tracked as TODO. (Windows/Linux unaffected.)
+- Bumped version **0.1.0 → 0.1.1** and cut the release so the download page (auto-tracks latest)
+  serves the ad-hoc-signed build.
+
 ### 2026-06-10 — Coders Republic logo in footers + download→home link
 - coders.ph only ships `logo-full-white.png` which is actually a **dark** logo (for light bgs).
   Generated a **white-knockout** version (`site/coders-logo-white.png`, white text + brand-red "o")
