@@ -2,17 +2,20 @@
 """
 Kausapp bug-report admin — a tiny, dependency-free viewer.
 
-Reads bug reports from the Cloudflare REPORTS KV namespace and renders them as a
-web page. Intended to run on the Tailscale droplet and bind to the tailnet IP so
-it is reachable ONLY from within the tailnet (admin.kausapp.com -> tailscale IP,
-DNS-only). All tailnet traffic is WireGuard-encrypted, so plain HTTP is fine.
+Renders the bug reports submitted from the app. To avoid storing any Cloudflare
+credential on the droplet, it reads the reports through the secret-protected
+Cloudflare endpoint `https://kausapp.com/api/reports` (the Pages Function has the
+KV binding). The droplet only holds a shared ADMIN_SECRET.
+
+Runs on the droplet bound to the Tailscale IP, so it's reachable ONLY from the
+tailnet (admin.kausapp.com -> 100.99.99.75, DNS-only). Tailnet traffic is
+WireGuard-encrypted, so plain HTTP is fine.
 
 Config via environment (see admin/kausapp-admin.env.example):
-  CF_API_TOKEN   Cloudflare API token with "Workers KV Storage: Read" (Edit to allow delete)
-  CF_ACCOUNT_ID  Cloudflare account id           (default: the kausapp account)
-  REPORTS_KV_ID  REPORTS KV namespace id         (default: the REPORTS namespace)
-  BIND_HOST      Address to bind                  (default: 100.99.99.75 — the tailnet IP)
-  BIND_PORT      Port to bind                     (default: 8080)
+  ADMIN_SECRET   shared secret matching the Pages ADMIN_SECRET   (required)
+  REPORTS_API    reports endpoint   (default: https://kausapp.com/api/reports)
+  BIND_HOST      bind address       (default: 100.99.99.75 — the tailnet IP)
+  BIND_PORT      bind port          (default: 8080)
 """
 
 import json
@@ -23,60 +26,32 @@ import urllib.parse
 import urllib.error
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-CF_API = "https://api.cloudflare.com/client/v4"
-CF_TOKEN = os.environ.get("CF_API_TOKEN", "")
-ACCOUNT_ID = os.environ.get("CF_ACCOUNT_ID", "30951f274c5ebe109b224b63bc6de688")
-KV_ID = os.environ.get("REPORTS_KV_ID", "ce3a8a24c91b4797a3dedf4d78e3fb7c")
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
+REPORTS_API = os.environ.get("REPORTS_API", "https://kausapp.com/api/reports")
 BIND_HOST = os.environ.get("BIND_HOST", "100.99.99.75")
 BIND_PORT = int(os.environ.get("BIND_PORT", "8080"))
 
+# A normal browser-ish UA so Cloudflare doesn't block the request as a bot
+# (default Python-urllib UA trips Cloudflare error 1010).
+UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 KausappAdmin/1.0"
 
-def cf(path, method="GET"):
-    req = urllib.request.Request(
-        CF_API + path,
-        method=method,
-        headers={"Authorization": f"Bearer {CF_TOKEN}", "Content-Type": "application/json"},
-    )
+
+def fetch_reports():
+    url = f"{REPORTS_API}?key={urllib.parse.quote(ADMIN_SECRET)}"
+    req = urllib.request.Request(url, headers={"X-Admin-Secret": ADMIN_SECRET, "User-Agent": UA})
     with urllib.request.urlopen(req, timeout=20) as r:
-        return json.load(r)
+        data = json.loads(r.read().decode())
+    if not data.get("ok"):
+        raise RuntimeError(data.get("error", "unknown error"))
+    return data.get("reports", [])
 
 
-def list_keys():
-    out, cursor = [], ""
-    while True:
-        q = "?limit=1000" + (f"&cursor={urllib.parse.quote(cursor)}" if cursor else "")
-        res = cf(f"/accounts/{ACCOUNT_ID}/storage/kv/namespaces/{KV_ID}/keys{q}")
-        out.extend(k["name"] for k in res.get("result", []))
-        cursor = (res.get("result_info") or {}).get("cursor", "")
-        if not cursor:
-            break
-    return out
-
-
-def get_value(key):
-    req = urllib.request.Request(
-        f"{CF_API}/accounts/{ACCOUNT_ID}/storage/kv/namespaces/{KV_ID}/values/{urllib.parse.quote(key)}",
-        headers={"Authorization": f"Bearer {CF_TOKEN}"},
-    )
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read().decode())
-
-
-def delete_key(key):
-    cf(f"/accounts/{ACCOUNT_ID}/storage/kv/namespaces/{KV_ID}/values/{urllib.parse.quote(key)}", method="DELETE")
-
-
-def load_reports():
-    keys = sorted(list_keys(), reverse=True)  # newest first (ts-prefixed)
-    reports = []
-    for k in keys[:500]:
-        try:
-            v = get_value(k)
-            v["_key"] = k
-            reports.append(v)
-        except Exception as e:  # noqa: BLE001
-            reports.append({"_key": k, "description": f"(failed to load: {e})", "ts": "", "version": "", "platform": ""})
-    return reports
+def delete_report(key):
+    body = json.dumps({"action": "delete", "key": key, "secret": ADMIN_SECRET}).encode()
+    req = urllib.request.Request(REPORTS_API, data=body, method="POST",
+                                 headers={"Content-Type": "application/json",
+                                          "X-Admin-Secret": ADMIN_SECRET, "User-Agent": UA})
+    urllib.request.urlopen(req, timeout=20).read()
 
 
 PAGE_CSS = """
@@ -130,7 +105,6 @@ def render(reports):
           </div>
           <div class="shot">{shot_html}</div>
         </div>""")
-
     body = "".join(rows) if rows else '<div class="empty">No bug reports yet. 🎉</div>'
     return f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -154,16 +128,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/", "/index.html"):
             try:
-                self._send(200, render(load_reports()))
+                self._send(200, render(fetch_reports()))
             except urllib.error.HTTPError as e:
-                self._send(500, f"<pre>Cloudflare API error {e.code}: {e.read().decode()[:500]}</pre>")
+                self._send(502, f"<pre>Upstream error {e.code}: {html.escape(e.read().decode()[:400])}</pre>")
             except Exception as e:  # noqa: BLE001
                 self._send(500, f"<pre>Error: {html.escape(str(e))}</pre>")
-        elif self.path == "/api/reports":
-            try:
-                self._send(200, json.dumps(load_reports()), "application/json")
-            except Exception as e:  # noqa: BLE001
-                self._send(500, json.dumps({"error": str(e)}), "application/json")
         elif self.path == "/healthz":
             self._send(200, "ok", "text/plain")
         else:
@@ -176,7 +145,7 @@ class Handler(BaseHTTPRequestHandler):
             key = (form.get("key") or [""])[0]
             try:
                 if key:
-                    delete_key(key)
+                    delete_report(key)
             except Exception:  # noqa: BLE001
                 pass
             self.send_response(303)
@@ -186,12 +155,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, "not found", "text/plain")
 
     def log_message(self, *_):
-        pass  # quiet
+        pass
 
 
 def main():
-    if not CF_TOKEN:
-        raise SystemExit("CF_API_TOKEN is not set. See admin/kausapp-admin.env.example")
+    if not ADMIN_SECRET:
+        raise SystemExit("ADMIN_SECRET is not set. See admin/kausapp-admin.env.example")
     srv = ThreadingHTTPServer((BIND_HOST, BIND_PORT), Handler)
     print(f"Kausapp admin listening on http://{BIND_HOST}:{BIND_PORT}")
     srv.serve_forever()

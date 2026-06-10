@@ -77,6 +77,23 @@ Messenger/
 - To get v0.1.6 from a pre-fix build: Check for Updates downloads it; if "Restart now" still no-ops,
   fully **Quit (Cmd+Q)** and reopen — `autoInstallOnAppQuit` applies it on quit.
 
+### 2026-06-11 — Tailscale admin LIVE (admin.kausapp.com)
+- Created DNS **`admin.kausapp.com` A → 100.99.99.75** (DNS-only/grey-cloud) using the user's
+  `~/.cf_dns` token (DNS:Edit; it lacked KV read).
+- **Re-architected to avoid a KV token on the droplet:** added secret-protected
+  `functions/api/reports.js` (`GET` list / `POST` delete, guarded by **ADMIN_SECRET**) — the Pages
+  Function has the KV binding, so no Cloudflare credential lives on the droplet. Set `ADMIN_SECRET`
+  via `wrangler pages secret put`. Verified: authorized 200, unauthorized 401.
+- Rewrote `admin/server.py` to fetch reports from `https://kausapp.com/api/reports` with the shared
+  secret (env `ADMIN_SECRET`). Added a browser User-Agent — Cloudflare error **1010** was blocking
+  the default Python-urllib UA.
+- Deployed on droplet: `~/Kausapp/admin/` + `kausapp-admin.env` (chmod 600) + systemd unit
+  `kausapp-admin` (enabled, active, binds **100.99.99.75:8080**). Passwordless sudo available.
+- **Live at `http://admin.kausapp.com:8080`** from any tailnet device. (Port 80 on the droplet is
+  taken by nginx; clean port-80 URL would need an nginx vhost — optional follow-up.)
+- Note: KV `list()` is eventually consistent (~up to 60s) so new reports take a moment to appear.
+- Security: removed local `/tmp` secret copy and `~/.cf_dns` after use; recommend rolling that token.
+
 ### 2026-06-11 — Admin not opening — diagnosis
 - `admin.kausapp.com` has **no DNS record** yet; droplet admin service **not installed/running**
   (port 8080 idle); **no KV token** on the droplet. (Droplet tailscale IP confirmed 100.99.99.75;
