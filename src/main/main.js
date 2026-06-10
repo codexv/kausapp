@@ -19,6 +19,9 @@ const { initAutoUpdates, checkForUpdates } = require('./updater');
 // Where bug reports are submitted (Cloudflare Pages Function backed by KV).
 const REPORT_ENDPOINT = 'https://kausapp.com/api/report';
 
+// Default zoom — one step (≈10%) smaller than 100% for a denser, app-like feel.
+const DEFAULT_ZOOM = 0.9;
+
 // electron-context-menu is ESM-only (v4+), so it's loaded via dynamic import()
 // inside app.whenReady() rather than a top-level require.
 
@@ -210,6 +213,10 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     compactCssKey = null; // previous handle is invalid after a load
     if (loadSettings().compactSidebar) applyCompactSidebar(true);
+    // Default the app one step smaller than 100% (90%) for a denser, more
+    // native feel. Respects a saved zoomFactor if the user changed it.
+    const z = loadSettings().zoomFactor;
+    mainWindow.webContents.setZoomFactor(typeof z === 'number' ? z : DEFAULT_ZOOM);
   });
 
   if (isDev) {

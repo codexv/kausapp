@@ -68,6 +68,24 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Admin scaffolding, website on droplet, web-dev docs, smaller default zoom
+- **Droplet web dev**: uploaded the website dev files to `irc.coders.ph:~/Kausapp/website/`
+  (`site/`, `functions/`, `wrangler.toml`) so web dev can continue from the droplet. Droplet has
+  Python 3.12 but **no Node** — deploying from there needs Node + wrangler (documented).
+- **`WEBDEV.md`** (repo root) — full website dev/deploy guide (structure, KV ids, API endpoints,
+  `wrangler pages deploy --branch main`, deploy-from-droplet via Node install or `CLOUDFLARE_API_TOKEN`,
+  data viewing). Uploaded to droplet as `~/Kausapp/website/README.md`.
+- **Tailscale admin (code complete; deploy pending token)**: droplet has Tailscale at
+  **100.99.99.75** (tailnet name `hackpixels-droplet`). Built `admin/server.py` (Python stdlib, no
+  deps) that reads the REPORTS KV via the CF API and renders reports (desc, version, platform, ts,
+  screenshot) + Delete. Plus `admin/kausapp-admin.service` (systemd) + `kausapp-admin.env.example` +
+  `admin/README.md`. Access model: **admin.kausapp.com → 100.99.99.75 via DNS-only A record**
+  (tailnet-only; WireGuard-encrypted so plain HTTP is fine). **Pending:** a CF API token with
+  "Workers KV Storage: Read" on the droplet + the DNS A record → then enable the service.
+- **Default zoom**: app now defaults to **90%** (`DEFAULT_ZOOM`, one step smaller) for a denser feel;
+  applied on load, respects a saved `zoomFactor`. (Not released yet — will batch into next version.)
+- Note: user's trailing "also…" message was cut off — awaiting the rest.
+
 ### 2026-06-10 — Check for Updates menu + version display + bug reporting → v0.1.2
 - **Check for Updates…** added under the **Help** menu. `updater.js` reworked to expose a manual
   `checkForUpdates()` that shows dialogs (checking → "up to date" / "update available" / error). The

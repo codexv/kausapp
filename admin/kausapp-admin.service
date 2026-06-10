@@ -1,0 +1,16 @@
+[Unit]
+Description=Kausapp Bug-Report Admin (Tailscale-only)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=acronix
+WorkingDirectory=/home/acronix/Kausapp/admin
+EnvironmentFile=/home/acronix/Kausapp/admin/kausapp-admin.env
+ExecStart=/usr/bin/python3 /home/acronix/Kausapp/admin/server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
