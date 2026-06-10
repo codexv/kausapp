@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download Kausapp — macOS, Windows &amp; Linux</title>
+  <meta name="description" content="Download Kausapp, the cross-platform desktop client for Facebook Messenger — for macOS, Windows, and Linux." />
+  <!-- Unlisted page: keep it out of search until launch. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="apple-touch-icon" href="/icon_512.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --blue: #1456ff; --blue-bright: #3b82f6; --ink: #0a0e1a; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+      background-color: #000;
+      background-image:
+        radial-gradient(60% 45% at 50% 0%, rgba(20, 86, 255, 0.25) 0%, rgba(20, 86, 255, 0) 70%),
+        radial-gradient(40% 35% at 50% 100%, rgba(59, 130, 246, 0.14) 0%, rgba(0, 0, 0, 0) 70%);
+      background-repeat: no-repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+    .wrap { width: 100%; max-width: 640px; text-align: center; }
+    .logo { width: 88px; height: 88px; border-radius: 22px; box-shadow: 0 16px 44px rgba(20,86,255,0.45); margin-bottom: 20px; }
+    h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 800; letter-spacing: -0.02em; }
+    .ver { margin-top: 8px; font-size: 14px; color: #9fb3d8; }
+    .sub { margin: 14px auto 32px; font-size: 15px; line-height: 1.6; opacity: 0.8; max-width: 460px; }
+
+    .primary-slot { margin-bottom: 28px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      text-decoration: none; font-family: inherit; font-weight: 600;
+      border-radius: 14px; transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+    .btn-primary {
+      background: var(--blue); color: #fff; font-size: 17px; padding: 18px 34px;
+      box-shadow: 0 12px 34px rgba(20,86,255,0.45);
+    }
+    .btn-primary:hover { transform: translateY(-2px); background: #2f6bff; box-shadow: 0 16px 40px rgba(20,86,255,0.6); }
+    .btn-primary small { display: block; font-weight: 400; font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+    @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      display: flex; align-items: center; gap: 14px; text-align: left;
+      padding: 16px 18px; border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(59,130,246,0.3);
+      text-decoration: none; color: #fff;
+      transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+    }
+    .card:hover { border-color: var(--blue-bright); background: rgba(20,86,255,0.12); transform: translateY(-2px); }
+    .card .os { font-weight: 600; font-size: 15px; }
+    .card .meta { font-size: 12px; color: #9fb3d8; margin-top: 2px; }
+    .ico { font-size: 26px; line-height: 1; width: 30px; text-align: center; }
+
+    .all { margin-top: 30px; font-size: 14px; }
+    .all a { color: #cfe0ff; text-decoration: none; border-bottom: 1px solid rgba(207,224,255,0.4); }
+    .note { margin-top: 26px; font-size: 12px; opacity: 0.55; line-height: 1.6; max-width: 520px; margin-left: auto; margin-right: auto; }
+    footer { margin-top: 40px; font-size: 13px; opacity: 0.7; }
+    footer a { color: #fff; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <img class="logo" src="/icon.png" alt="Kausapp logo" />
+    <h1>Download Kausapp</h1>
+    <div class="ver" id="ver">Version 0.1.0</div>
+    <p class="sub">The desktop client for Facebook Messenger — real-time, with calls, attachments, and native notifications. Free for macOS, Windows, and Linux.</p>
+
+    <!-- Primary, OS-detected button (filled in by JS; falls back to the grid below). -->
+    <div class="primary-slot" id="primary-slot" hidden>
+      <a class="btn btn-primary" id="primary-btn" href="#">
+        <span id="primary-label">Download</span>
+      </a>
+    </div>
+
+    <!-- All platforms. Hardcoded to v0.1.0 so they work with no JS; JS upgrades them to the latest release. -->
+    <div class="grid">
+      <a class="card" data-key="mac-arm" href="https://github.com/codexv/kausapp/releases/download/v0.1.0/Kausapp-0.1.0-arm64.dmg">
+        <span class="ico">🍎</span>
+        <span><span class="os">macOS — Apple Silicon</span><span class="meta">.dmg · M1/M2/M3</span></span>
+      </a>
+      <a class="card" data-key="mac-intel" href="https://github.com/codexv/kausapp/releases/download/v0.1.0/Kausapp-0.1.0.dmg">
+        <span class="ico">🍎</span>
+        <span><span class="os">macOS — Intel</span><span class="meta">.dmg · Intel Macs</span></span>
+      </a>
+      <a class="card" data-key="win" href="https://github.com/codexv/kausapp/releases/download/v0.1.0/Kausapp.Setup.0.1.0.exe">
+        <span class="ico">🪟</span>
+        <span><span class="os">Windows</span><span class="meta">.exe · installer</span></span>
+      </a>
+      <a class="card" data-key="linux-appimage" href="https://github.com/codexv/kausapp/releases/download/v0.1.0/Kausapp-0.1.0.AppImage">
+        <span class="ico">🐧</span>
+        <span><span class="os">Linux — AppImage</span><span class="meta">.AppImage · portable</span></span>
+      </a>
+      <a class="card" data-key="linux-deb" href="https://github.com/codexv/kausapp/releases/download/v0.1.0/kausapp_0.1.0_amd64.deb">
+        <span class="ico">🐧</span>
+        <span><span class="os">Linux — Debian/Ubuntu</span><span class="meta">.deb · amd64</span></span>
+      </a>
+    </div>
+
+    <p class="all"><a href="https://github.com/codexv/kausapp/releases/latest" target="_blank" rel="noopener">All downloads &amp; release notes →</a></p>
+
+    <p class="note">
+      The app isn't code-signed yet, so on first launch macOS may say "unidentified developer"
+      (right-click → Open) and Windows SmartScreen may warn (More info → Run anyway).
+      Not affiliated with Meta; "Messenger" is a trademark of Meta Platforms, Inc.
+    </p>
+
+    <footer>By <a href="https://coders.ph" target="_blank" rel="noopener">Coders Republic</a></footer>
+  </main>
+
+  <script>
+    var REPO = 'codexv/kausapp';
+
+    // Match release assets to our platform keys.
+    function classify(name) {
+      if (/-arm64\.dmg$/i.test(name)) return 'mac-arm';
+      if (/\.dmg$/i.test(name)) return 'mac-intel';
+      if (/\.exe$/i.test(name)) return 'win';
+      if (/\.AppImage$/i.test(name)) return 'linux-appimage';
+      if (/\.deb$/i.test(name)) return 'linux-deb';
+      return null;
+    }
+
+    var LABELS = {
+      'mac-arm': 'Download for macOS (Apple Silicon)',
+      'mac-intel': 'Download for macOS (Intel)',
+      'win': 'Download for Windows',
+      'linux-appimage': 'Download for Linux (AppImage)',
+      'linux-deb': 'Download for Linux (.deb)'
+    };
+
+    // Guess the visitor's platform for the primary button.
+    function detectKey() {
+      var ua = navigator.userAgent;
+      var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+      if (/Mac/i.test(p) || /Mac OS X/i.test(ua)) return 'mac-arm';   // default Mac → Apple Silicon
+      if (/Win/i.test(p) || /Windows/i.test(ua)) return 'win';
+      if (/Linux/i.test(p) || /Linux/i.test(ua)) return 'linux-appimage';
+      return null;
+    }
+
+    function setPrimary(key, href) {
+      if (!key || !href) return;
+      var slot = document.getElementById('primary-slot');
+      var btn = document.getElementById('primary-btn');
+      document.getElementById('primary-label').textContent = LABELS[key] || 'Download';
+      btn.href = href;
+      slot.hidden = false;
+    }
+
+    // Upgrade hardcoded v0.1.0 links to whatever the latest release is.
+    (async function () {
+      var links = {};
+      document.querySelectorAll('.card[data-key]').forEach(function (a) { links[a.dataset.key] = a; });
+
+      // Set primary from current (hardcoded) links immediately, then refine after fetch.
+      var dk = detectKey();
+      if (dk && links[dk]) setPrimary(dk, links[dk].getAttribute('href'));
+
+      try {
+        var res = await fetch('https://api.github.com/repos/' + REPO + '/releases/latest', {
+          headers: { 'Accept': 'application/vnd.github+json' }
+        });
+        if (!res.ok) return;
+        var rel = await res.json();
+        if (rel.tag_name) document.getElementById('ver').textContent = 'Version ' + rel.tag_name.replace(/^v/, '');
+        (rel.assets || []).forEach(function (asset) {
+          if (/\.blockmap$/i.test(asset.name) || /\.yml$/i.test(asset.name)) return;
+          var key = classify(asset.name);
+          if (key && links[key]) links[key].href = asset.browser_download_url;
+        });
+        if (dk && links[dk]) setPrimary(dk, links[dk].getAttribute('href'));
+      } catch (e) { /* keep hardcoded fallback links */ }
+    })();
+  </script>
+</body>
+</html>

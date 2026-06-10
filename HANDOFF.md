@@ -68,6 +68,15 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Download page at /download (unlisted)
+- Added **`site/download/index.html`** → live at **https://kausapp.com/download**. Black/blue themed,
+  OS-detected primary button + cards for all platforms (mac arm64/intel, win exe, linux AppImage/deb).
+- Links are hardcoded to the v0.1.0 release (work with no JS) and **auto-upgrade to the latest
+  release** via the GitHub API (`/releases/latest`), with version label auto-updating too.
+- **Not linked from the homepage** (per user) — direct URL only. Also `noindex,nofollow` so it stays
+  out of search until launch. Verified: homepage has no `/download` reference.
+- This is the QA/test + distribution entry point for the installable app.
+
 ### 2026-06-10 — v0.1.0 released (all platforms) + macOS dmgs rebuilt with new icon
 - Cut **v0.1.0**: bumped nothing (already 0.1.0), tagged `v0.1.0`, pushed → CI built all 3 platforms
   green and `softprops/action-gh-release` published the (non-draft) Release.
