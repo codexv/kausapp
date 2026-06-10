@@ -68,6 +68,19 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — v0.1.0 released (all platforms) + macOS dmgs rebuilt with new icon
+- Cut **v0.1.0**: bumped nothing (already 0.1.0), tagged `v0.1.0`, pushed → CI built all 3 platforms
+  green and `softprops/action-gh-release` published the (non-draft) Release.
+- **Release URL:** https://github.com/codexv/kausapp/releases/tag/v0.1.0
+- Assets attached: mac `dmg` (intel + arm64) + `zip` (intel + arm64), Windows `Kausapp.Setup.0.1.0.exe`,
+  Linux `.AppImage` + `_amd64.deb`, plus blockmaps and the update feeds `latest.yml` /
+  `latest-mac.yml` / `latest-linux.yml`. The auto-updater is now live against this feed.
+- These CI-built artifacts include the **new black/blue icon** (built from current main). The local
+  `release/` dmgs were also rebuilt with the new icon during the updater work.
+- **How to ship an update going forward:** bump `version` in package.json → commit → `git tag vX.Y.Z
+  && git push origin vX.Y.Z`. CI builds + publishes the Release; installed apps detect it on next
+  launch / 6h check and self-update (Windows + Linux; macOS once signed).
+
 ### 2026-06-10 — Auto-update system (electron-updater + GitHub Releases)
 - Added the standard Electron auto-update flow so updates can be pushed by just publishing a new
   GitHub Release.
