@@ -554,7 +554,9 @@ app.whenReady().then(async () => {
   buildTray();
 
   // Start the GitHub-Releases-backed auto-updater (no-op in dev / unpackaged).
-  initAutoUpdates(() => mainWindow);
+  // The second arg lets the updater flip isQuitting before quitAndInstall so the
+  // macOS hide-on-close handler doesn't keep the app alive and block the update.
+  initAutoUpdates(() => mainWindow, () => { isQuitting = true; });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

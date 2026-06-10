@@ -9,6 +9,7 @@ const { app, dialog } = require('electron');
 
 let autoUpdater = null;
 let getWin = null;
+let beforeInstall = null; // called right before quitAndInstall (lets main.js allow the quit)
 let manualCheck = false; // true when the user explicitly invoked a check
 
 function win() {
@@ -77,7 +78,12 @@ function wireEvents() {
       message: `Kausapp ${info && info.version ? info.version : ''} is ready to install.`,
       detail: 'Restart Kausapp to apply it. It will also install automatically the next time you quit.'
     });
-    if (response === 0) setImmediate(() => autoUpdater.quitAndInstall());
+    if (response === 0) {
+      // Tell main.js we're really quitting so its macOS hide-on-close handler
+      // doesn't intercept the window close and keep the app alive.
+      if (typeof beforeInstall === 'function') beforeInstall();
+      setImmediate(() => autoUpdater.quitAndInstall());
+    }
   });
 
   autoUpdater.on('error', (err) => {
@@ -95,8 +101,9 @@ function wireEvents() {
   });
 }
 
-function initAutoUpdates(getWindow) {
+function initAutoUpdates(getWindow, onBeforeInstall) {
   getWin = getWindow;
+  if (typeof onBeforeInstall === 'function') beforeInstall = onBeforeInstall;
   if (!app.isPackaged) return; // no update metadata in dev
   if (!load()) return;
   const check = () => autoUpdater.checkForUpdates().catch(() => {});

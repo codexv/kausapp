@@ -68,6 +68,24 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-11 — Fix "Restart now" not restarting (macOS) → v0.1.6
+- Bug: the update-downloaded "Restart now" button didn't restart on macOS. Cause: the window
+  `close` handler hides the app (keep-alive) on mac, so `quitAndInstall()`'s window close was
+  intercepted → app never quit → update not applied.
+- Fix: `updater.js` now calls an `onBeforeInstall` hook before `quitAndInstall()`; `main.js` passes
+  `() => { isQuitting = true; }` so the close handler allows the quit. Cut **v0.1.6**.
+- To get v0.1.6 from a pre-fix build: Check for Updates downloads it; if "Restart now" still no-ops,
+  fully **Quit (Cmd+Q)** and reopen — `autoInstallOnAppQuit` applies it on quit.
+
+### 2026-06-11 — Admin not opening — diagnosis
+- `admin.kausapp.com` has **no DNS record** yet; droplet admin service **not installed/running**
+  (port 8080 idle); **no KV token** on the droplet. (Droplet tailscale IP confirmed 100.99.99.75;
+  note **port 80 is already in use** there — likely nginx — so admin will use :8080 or need an nginx
+  vhost.)
+- The wrangler OAuth credential is **zone:read only** → cannot create DNS (verified: auth error).
+  Need a Cloudflare API token with **DNS:Edit (kausapp.com)** + **Workers KV Storage:Read** to create
+  the record and run the admin. Pending user-provided token in `~/.cf_token`.
+
 ### 2026-06-10 — Remote-hosted userstyles → v0.1.5 (theme tweaks need no app release)
 - Userstyles now **fetched from kausapp.com at runtime**, with the bundled `src/main/userstyle-*.css`
   as offline fallback. `main.js`: added `loadStyleCss(name, localPath)` (fetch
