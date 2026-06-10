@@ -54,6 +54,7 @@ jobs:
           if-no-files-found: error
           path: |
             release/*.dmg
+            release/*.zip
             release/*.exe
             release/*.AppImage
             release/*.deb
@@ -66,6 +67,7 @@ jobs:
         with:
           files: |
             release/*.dmg
+            release/*.zip
             release/*.exe
             release/*.AppImage
             release/*.deb

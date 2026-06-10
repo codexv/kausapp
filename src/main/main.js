@@ -13,6 +13,8 @@ const {
 const path = require('node:path');
 const fs = require('node:fs');
 
+const { initAutoUpdates } = require('./updater');
+
 // electron-context-menu is ESM-only (v4+), so it's loaded via dynamic import()
 // inside app.whenReady() rather than a top-level require.
 
@@ -317,6 +319,9 @@ app.whenReady().then(async () => {
   buildMenu();
   createWindow();
   buildTray();
+
+  // Start the GitHub-Releases-backed auto-updater (no-op in dev / unpackaged).
+  initAutoUpdates(() => mainWindow);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

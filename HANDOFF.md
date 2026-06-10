@@ -68,6 +68,23 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Auto-update system (electron-updater + GitHub Releases)
+- Added the standard Electron auto-update flow so updates can be pushed by just publishing a new
+  GitHub Release.
+- `electron-updater` added to dependencies. `build.publish` set to GitHub (`owner: codexv,
+  repo: kausapp`) so electron-builder embeds `app-update.yml` and emits `latest*.yml` feed files.
+- macOS: added a **`zip`** target alongside `dmg` (Squirrel.Mac requires the zip for updates).
+- **`src/main/updater.js`** — `initAutoUpdates()`: no-op when `!app.isPackaged` (dev); on launch +
+  every 6h checks GitHub, auto-downloads in background, and on `update-downloaded` shows a
+  "Restart now / Later" dialog (also installs on next quit). Errors are logged, never nag.
+- Wired into `main.js` (`initAutoUpdates(() => mainWindow)` after window creation).
+- Rebuilt macOS locally → dmg + zip + blockmaps + `latest-mac.yml` (verified, references v0.1.0).
+- CI workflow: added `release/*.zip` to the upload/release globs (was missing → mac updates would
+  have lacked their artifact).
+- **Caveat:** macOS auto-update requires the app to be **code-signed + notarized** (Squirrel.Mac
+  validates the signature) — Windows (NSIS) and Linux (AppImage) auto-update work unsigned. So mac
+  auto-update is wired but won't fully apply until we add an Apple Developer cert. Tracked as TODO.
+
 ### 2026-06-10 — Real email capture (Cloudflare Pages Function + KV)
 - Replaced the notify form's `mailto:` with a real, self-owned signup endpoint.
 - Created KV namespace **SUBSCRIBERS** (id `931015b6e7054ed386a825f5188e0979`).
