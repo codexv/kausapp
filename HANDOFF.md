@@ -80,11 +80,23 @@ Messenger/
   env, `cloudflared` present. **Deploy requires the user's Cloudflare auth** → pending choice of
   method (wrangler+token / Pages git-integration / droplet). Page committed to the repo so
   Cloudflare Pages can build from `site/`.
-- **Deploy method chosen: Cloudflare Pages + GitHub git-integration.** Settings for the user to apply
-  in the CF dashboard: connect repo `codexv/kausapp`, production branch `main`, framework preset
-  None, **build command blank**, **build output directory `site`**, root `/`. Then add custom
-  domains `kausapp.com` + `www.kausapp.com` (DNS already on Cloudflare → auto records + SSL).
-  Auto-redeploys on push to main. (Pending user completing the dashboard steps.)
+- **Deploy method (revised per user): Cloudflare Pages direct upload via wrangler**, with app
+  installers delivered separately via GitHub Releases ("let git handle the app delivery"). The
+  dashboard git-integration flow was abandoned as more confusing.
+- **Deployed.** User authenticated wrangler via `wrangler login` (OAuth, account
+  `acronix@coders.ph`, account id `30951f274c5ebe109b224b63bc6de688`). Created Pages project
+  `kausapp` and deployed `site/` → **live at https://kausapp.pages.dev** (HTTP 200, valid SSL,
+  correct title verified).
+- **Custom domains** `kausapp.com` + `www.kausapp.com` attached to the Pages project via the
+  Cloudflare API (using the wrangler OAuth token). Zone is active and in the same account.
+- **Blocker (handoff to user):** domains stuck at `pending` — DNS records were not auto-created and
+  the wrangler OAuth token only has `zone:read` (no `dns_records:edit`), so DNS can't be created from
+  here. User to either (A) add two CNAMEs in the dashboard — `@` → `kausapp.pages.dev` (proxied) and
+  `www` → `kausapp.pages.dev` (proxied), deleting any conflicting apex parking record — or (B)
+  provide an API token with `Zone→DNS→Edit` so this can be finished here. Once DNS points to Pages,
+  domains go active + SSL auto-provisions.
+- Note: redeploys are manual (`npx wrangler pages deploy site --project-name kausapp`) since we used
+  direct upload, not git-integration. TODO: real email capture for the notify form (currently mailto).
 
 ### 2026-06-10 — Monetization strategy documented
 - User plans to acquire **kausapp.com** and wants the project monetized; asked for insights.
