@@ -89,6 +89,13 @@ Messenger/
 - Workflow note: bug-report screenshots are now a usable debugging channel — pull newest via the
   admin API with ADMIN_SECRET, base64-decode the screenshot.
 
+### 2026-06-11 — Switch footer logo to provided SVG (coders_minimal.svg)
+- User supplied `coders_minimal.svg` — a self-contained **dark-card** logo (white "coders" + red "o",
+  red accents on a dark rounded card, designed for dark backgrounds). Copied to `site/coders-logo.svg`.
+- Updated both footers to use the SVG and **removed the white chip** (no longer needed — the SVG is its
+  own dark card); kept a soft drop shadow, height ~48–52px. Removed `site/coders-logo.png`.
+  Deployed + verified.
+
 ### 2026-06-11 — Use the real Coders Republic logo in footers
 - Replaced the flat white-knockout with the **actual** brand logo from coders.ph
   (`logo-full-white.png` → `site/coders-logo.png`). Since its text is dark (made for light bgs), it
