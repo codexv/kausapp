@@ -28,7 +28,7 @@ external-link handling, persistent login, and microphone/camera access for voice
 
 ## Download
 
-Official site: **[kausapp.coders.ph](https://kausapp.coders.ph)** — or grab the installer for your
+Official site: **[kausapp.com](https://kausapp.com)** — or grab the installer for your
 platform directly from the [**Releases**](../../releases) page:
 
 | Platform | File |

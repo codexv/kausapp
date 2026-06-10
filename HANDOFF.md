@@ -68,6 +68,16 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Dropped kausapp.coders.ph; kausapp.com is the sole canonical domain
+- Per user: move everything to kausapp.com and drop kausapp.coders.ph.
+- `kausapp.coders.ph` was never actually created (no DNS record existed) — it was only a *planned*
+  subdomain referenced in docs, so nothing to tear down on Cloudflare. Earlier `kausapp.com` redirect
+  TODO is therefore void.
+- Updated references to point at kausapp.com: `package.json` homepage, `README.md` official-site
+  link, `MONETIZATION.md` domain section. GitHub repo homepage updated to `https://kausapp.com` via
+  `gh repo edit`. (`site/index.html` already used kausapp.com in its meta — unchanged.)
+- Prior changelog entries that mention kausapp.coders.ph are left as-is (accurate historical record).
+
 ### 2026-06-10 — kausapp.com LIVE
 - Resolved the custom-domain DNS blocker. First DNS-edit token the user supplied was scoped to the
   `coders.ph` zone only (auth error on kausapp.com). User updated the token to cover kausapp.com.

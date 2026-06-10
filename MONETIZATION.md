@@ -59,8 +59,8 @@ never Messenger access itself.
 
 ## Domain
 
-- Acquire **kausapp.com** and make it the **primary** brand/SEO domain; redirect
-  `kausapp.coders.ph` → `kausapp.com`.
+- **kausapp.com** is the single canonical brand/SEO domain (live on Cloudflare Pages). The
+  `kausapp.coders.ph` subdomain idea was dropped — everything lives on the `.com`.
 - `.com` reads as more trustworthy/global and ranks better than a subdomain.
 
 ---
