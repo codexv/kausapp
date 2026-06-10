@@ -77,6 +77,13 @@ Messenger/
 - To get v0.1.6 from a pre-fix build: Check for Updates downloads it; if "Restart now" still no-ops,
   fully **Quit (Cmd+Q)** and reopen — `autoInstallOnAppQuit` applies it on quit.
 
+### 2026-06-11 — Use the real Coders Republic logo in footers
+- Replaced the flat white-knockout with the **actual** brand logo from coders.ph
+  (`logo-full-white.png` → `site/coders-logo.png`). Since its text is dark (made for light bgs), it
+  now sits on a clean **white chip** (rounded, padded, soft shadow) so it's legible on the black
+  footers. Updated both `site/index.html` + `site/download/index.html`; removed `coders-logo-white.png`.
+  Deployed + verified live.
+
 ### 2026-06-11 — Tailscale admin LIVE (admin.kausapp.com)
 - Created DNS **`admin.kausapp.com` A → 100.99.99.75** (DNS-only/grey-cloud) using the user's
   `~/.cf_dns` token (DNS:Edit; it lacked KV read).
