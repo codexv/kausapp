@@ -49,6 +49,8 @@ Messenger/
 ├── HANDOFF.md            # this file
 ├── README.md             # user-facing download/build/run instructions
 ├── ABOUT.md              # detailed teaser/marketing doc (also uploaded to irc.coders.ph:~/Kausapp/)
+├── MONETIZATION.md       # monetization strategy & guardrails (planning/reference)
+├── .github/workflows/build.yml   # CI: build mac/win/linux installers, attach to Release on v* tag
 ├── .gitignore
 ├── src/
 │   └── main/
@@ -65,6 +67,23 @@ Messenger/
 ---
 
 ## Changelog
+
+### 2026-06-10 — Monetization strategy documented
+- User plans to acquire **kausapp.com** and wants the project monetized; asked for insights.
+- Created **`MONETIZATION.md`** capturing the full strategy. Core constraint: cannot legally
+  paywall Messenger *access* (Meta Platform Terms) → monetize value we add, our audience, and
+  Coders Republic's business instead.
+- Paths (priority order): (1) **freemium on our own features** (multi-account, themes, advanced
+  notifications, scheduling, privacy toggles) via Lemon Squeezy/Paddle, ~$15–25 one-time;
+  (2) donations/supporter tier; (3) **kausapp.com as an SEO acquisition engine** (high-intent
+  "Messenger desktop app" search demand) monetized via ads/affiliates/email list on the *site*;
+  (4) **Coders Republic lead-gen / white-label** desktop-client service (likely highest value).
+- Guardrails noted: code-sign before charging, stay descriptive (not branded), publish
+  Privacy Policy + Terms, never sell/scrape data, skip app stores (direct download from kausapp.com).
+- Domain plan: make `kausapp.com` primary; redirect `kausapp.coders.ph` → it.
+- Recommended sequence: free + code-sign + SEO now → 2–3 Pro features + freemium in ~1 month →
+  ride traffic for affiliates/Pro + CR client work. Treat license sales as small revenue; audience
+  + lead-gen as the real prize. (Strategy, not legal advice — review Meta terms before paid launch.)
 
 ### 2026-06-10 — GitHub repo + cross-platform CI (all green)
 - Public repo created: **https://github.com/codexv/kausapp** (account `codexv`; no org). Homepage set
