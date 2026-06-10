@@ -184,17 +184,39 @@
   </main>
 
   <script>
-    // No backend yet: open the user's mail client to register interest.
-    // Swap this for a real list (Cloudflare Worker / form service) before launch.
-    function notifyMe(e) {
+    // Submit the email to our Cloudflare Pages Function, which stores it in KV.
+    async function notifyMe(e) {
       e.preventDefault();
-      var email = document.getElementById('email').value.trim();
+      var input = document.getElementById('email');
       var note = document.getElementById('note');
+      var btn = document.querySelector('#notify button');
+      var email = input.value.trim();
       if (!email) return false;
-      window.location.href =
-        'mailto:hello@coders.ph?subject=' + encodeURIComponent('Notify me when Kausapp launches') +
-        '&body=' + encodeURIComponent('Please notify me at: ' + email);
-      note.textContent = "Thanks! Your email app should open — send it and you're on the list.";
+
+      btn.disabled = true;
+      var prev = btn.textContent;
+      btn.textContent = '…';
+      try {
+        var res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (res.ok && data.ok) {
+          document.getElementById('notify').style.display = 'none';
+          note.textContent = "🎉 You're on the list — we'll email you when Kausapp launches.";
+        } else if (data.error === 'invalid_email') {
+          note.textContent = 'Please enter a valid email address.';
+        } else {
+          note.textContent = 'Something went wrong — please try again.';
+        }
+      } catch (err) {
+        note.textContent = 'Network error — please try again.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
       return false;
     }
   </script>

@@ -9,3 +9,6 @@ backups/
 
 # Generated icon scratch
 assets/icon.iconset/
+
+# Wrangler local cache
+.wrangler/

@@ -68,6 +68,23 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Real email capture (Cloudflare Pages Function + KV)
+- Replaced the notify form's `mailto:` with a real, self-owned signup endpoint.
+- Created KV namespace **SUBSCRIBERS** (id `931015b6e7054ed386a825f5188e0979`).
+- Added **`wrangler.toml`** (name `kausapp`, `pages_build_output_dir = "site"`, KV binding) so the
+  Pages project bundles Functions + binds KV. Deploy command is now `npx wrangler pages deploy`
+  (no positional dir — reads config).
+- Added **`functions/api/subscribe.js`** — Pages Function: `POST /api/subscribe` validates the email,
+  stores `sub:<email>` → JSON `{email, ts, ua, country}` in KV (idempotent). Non-POST → 405.
+- Updated `site/index.html` form JS to `fetch('/api/subscribe')` with success/error states.
+- Verified live on kausapp.com: valid → `{ok:true}` 200 (KV key created), invalid → 400, GET → 405.
+  Removed the test entry; KV starts empty.
+- **Viewing signups:** `npx wrangler kv key list --namespace-id=931015b6e7054ed386a825f5188e0979
+  --remote` (or dashboard → Workers & Pages → KV → SUBSCRIBERS). Read one:
+  `wrangler kv key get --namespace-id=… "sub:<email>" --remote`.
+- `.gitignore`: added `.wrangler/` cache dir.
+- TODO: optional double opt-in / export-to-CSV / notify-on-launch broadcast.
+
 ### 2026-06-10 — Rebrand colors to black & blue
 - User disliked the purple theme → switched brand to **black & blue**, then specified the page
   **background should be black** (not a blue gradient).

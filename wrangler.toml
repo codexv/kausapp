@@ -1,0 +1,10 @@
+# Cloudflare Pages config for the kausapp.com site + its Functions.
+# Static assets live in site/; serverless Functions live in functions/.
+name = "kausapp"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "site"
+
+# KV namespace that stores coming-soon email signups (key: "sub:<email>").
+[[kv_namespaces]]
+binding = "SUBSCRIBERS"
+id = "931015b6e7054ed386a825f5188e0979"
