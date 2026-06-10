@@ -66,6 +66,21 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — GitHub repo + cross-platform CI (all green)
+- Public repo created: **https://github.com/codexv/kausapp** (account `codexv`; no org). Homepage set
+  to `https://kausapp.coders.ph` (planned hosting site); topics added.
+- `.github/workflows/build.yml` — matrix build on macOS/Windows/Linux. Push to main builds + uploads
+  artifacts; a `v*` tag also attaches installers to a GitHub Release (`softprops/action-gh-release`).
+  Build step uses `--publish never` + `CSC_IDENTITY_AUTO_DISCOVERY=false` (unsigned for now).
+- `.gitignore` updated to exclude local `backups/` and `assets/icon.iconset/` from the repo.
+- `package.json` homepage → `kausapp.coders.ph`; README download section points to the site.
+- **First CI run**: macOS ✓ + Windows ✓, **Linux ✗** — `.deb` needs a maintainer email. Fixed by
+  adding `build.linux.maintainer = "Coders Republic <kriokaze@gmail.com>"`. (TODO: swap to a real
+  coders.ph address before public launch.)
+- **Rebuild: all three platforms green** — macOS (.dmg), Windows (.exe/NSIS), Linux (.AppImage + .deb).
+  Tagging `v0.1.0` will produce a downloadable Release with all installers.
+- Note: harmless CI annotation about Node 20 actions being deprecated (works until Sept 2026).
+
 ### 2026-06-10 — Branding (Kausapp), icon, installers, ABOUT.md + droplet upload
 - **Naming**: publisher = **Coders Republic (coders.ph)**. App name decided as **"Kausapp"**
   (Filipino *kausap* = "person you talk with"; doubled "p" embeds "app"; coined name → better for
