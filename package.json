@@ -51,7 +51,8 @@
     "linux": {
       "category": "Network",
       "target": ["AppImage", "deb"],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "maintainer": "Coders Republic <kriokaze@gmail.com>"
     }
   }
 }
