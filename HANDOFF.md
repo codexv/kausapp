@@ -77,6 +77,18 @@ Messenger/
 - To get v0.1.6 from a pre-fix build: Check for Updates downloads it; if "Restart now" still no-ops,
   fully **Quit (Cmd+Q)** and reopen — `autoInstallOnAppQuit` applies it on quit.
 
+### 2026-06-11 — OLED: strip per-chat gradient theme ("weird" chat background)
+- User's "weird chat background" turned out to be a **Messenger per-conversation chat theme**
+  (purple/blue gradient wallpaper) — confirmed by viewing the **screenshot in their in-app bug
+  report** (the whole report→KV→admin pipeline paid off: fetched the report via the admin secret,
+  decoded the screenshot, saw the gradient). Left list + right pane were already black.
+- Fix (hosted `oled.css` + bundled fallback): strip gradient backgrounds (`[style*="gradient"]` →
+  `#000`), which removes chat-theme wallpapers while leaving url() avatars/photos intact. Deploy +
+  reload applies it (no app release). Earlier fix also forced main regions solid black + removed gray
+  dividers/shadows.
+- Workflow note: bug-report screenshots are now a usable debugging channel — pull newest via the
+  admin API with ADMIN_SECRET, base64-decode the screenshot.
+
 ### 2026-06-11 — Use the real Coders Republic logo in footers
 - Replaced the flat white-knockout with the **actual** brand logo from coders.ph
   (`logo-full-white.png` → `site/coders-logo.png`). Since its text is dark (made for light bgs), it
