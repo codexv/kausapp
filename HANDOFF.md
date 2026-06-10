@@ -80,6 +80,11 @@ Messenger/
   env, `cloudflared` present. **Deploy requires the user's Cloudflare auth** → pending choice of
   method (wrangler+token / Pages git-integration / droplet). Page committed to the repo so
   Cloudflare Pages can build from `site/`.
+- **Deploy method chosen: Cloudflare Pages + GitHub git-integration.** Settings for the user to apply
+  in the CF dashboard: connect repo `codexv/kausapp`, production branch `main`, framework preset
+  None, **build command blank**, **build output directory `site`**, root `/`. Then add custom
+  domains `kausapp.com` + `www.kausapp.com` (DNS already on Cloudflare → auto records + SSL).
+  Auto-redeploys on push to main. (Pending user completing the dashboard steps.)
 
 ### 2026-06-10 — Monetization strategy documented
 - User plans to acquire **kausapp.com** and wants the project monetized; asked for insights.
