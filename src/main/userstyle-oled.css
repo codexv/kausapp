@@ -1,22 +1,26 @@
 /*
  * Kausapp — Pure Black (OLED) theme.
  *
- * Forces Messenger's surfaces to true black (#000) — great for OLED screens.
- * Enable Messenger's own Dark mode first (gear / settings) for the best result;
- * this restyles the dark palette to pure black rather than dark gray.
+ * Forces EVERY Messenger surface to true black (#000). Works best with
+ * Messenger's own Dark mode on. Toggle from View → "Pure black (OLED) theme".
  *
- * Toggle from View → "Pure black (OLED) theme".
- *
- * messenger.com uses Facebook design-token CSS variables for theming, which are
- * fairly stable — we override those plus the root surfaces. If Meta changes the
- * tokens this may need tuning; adjust here and reload (Cmd/Ctrl+R).
+ * Strategy (robust against Meta's obfuscated class names):
+ *   1) Paint the document root pure black.
+ *   2) Override Facebook design-token CSS variables to black.
+ *   3) Make container backgrounds TRANSPARENT so the black root shows through
+ *      everywhere — this catches surfaces our token list misses. We deliberately
+ *      do NOT touch `background-image`, so avatars / photos / group images that
+ *      use background-image are preserved.
+ *   4) Restore the Messenger-blue accent (message bubbles, primary buttons) so
+ *      the UI stays usable.
  */
 
-html, body {
+/* 1) Black root. */
+html, body, #facebook {
   background: #000 !important;
 }
 
-/* Override Facebook/Messenger dark-theme design tokens to black. */
+/* 2) Design-token overrides. */
 :root {
   --web-wash: #000 !important;
   --wash: #000 !important;
@@ -24,26 +28,35 @@ html, body {
   --card-background: #000 !important;
   --messenger-card-background: #000 !important;
   --message-list-background: #000 !important;
-  --comment-background: #050505 !important;
+  --comment-background: #000 !important;
   --material-background: #000 !important;
   --base-overlay-background: #000 !important;
   --dialog-view-background: #000 !important;
-  --popover-background: #0a0a0a !important;
-  --menu-background: #0a0a0a !important;
+  --popover-background: #000 !important;
+  --menu-background: #000 !important;
   --highlight-bg: #0d0d0d !important;
-  --hover-overlay: rgba(255,255,255,0.06) !important;
   --left-nav-background: #000 !important;
-  --secondary-button-background: #141414 !important;
-  --primary-deemphasized-button-background: #141414 !important;
-  --secondary-wash: #0a0a0a !important;
-  --negative-feedback-background: #000 !important;
-  --shadow-2: 0 0 0 1px rgba(255,255,255,0.06) !important;
+  --secondary-wash: #000 !important;
 }
 
-/* Belt-and-suspenders: pull the very common FB dark grays down to black. */
-[style*="background-color: rgb(36, 37, 38)"],
-[style*="background-color: rgb(24, 25, 26)"],
-[style*="background-color: rgb(0, 0, 0)"],
-[style*="background-color: rgb(58, 59, 60)"] {
-  background-color: #000 !important;
+/* 3) Transparent containers over the black root. Only background-COLOR is
+ *    cleared, never background-image (keeps avatars / photos intact). */
+:where(div, section, main, aside, header, nav, footer, ul, ol, li, table, thead,
+       tbody, tr, td, th, form, label, article, dialog) {
+  background-color: transparent !important;
+}
+
+/* 4) Restore the Messenger-blue accent so sent-message bubbles and primary
+ *    buttons stay blue. Covers the common blues Messenger uses. */
+[style*="rgb(0, 132, 255)"],
+[style*="rgb(0, 100, 224)"],
+[style*="rgb(20, 86, 255)"],
+[style*="#0084ff" i],
+[aria-label="Send" i] {
+  background-color: #0084ff !important;
+}
+
+/* Keep inputs / composer fields faintly visible against pure black. */
+:where(input, textarea, [contenteditable="true"], [role="textbox"]) {
+  background-color: #0d0d0d !important;
 }

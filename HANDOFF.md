@@ -68,6 +68,18 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — OLED theme: force ALL surfaces black → v0.1.4
+- User reported OLED wasn't fully black (token overrides missed surfaces). Rewrote
+  `userstyle-oled.css` to the robust "transparent containers over a black root" technique:
+  black `html/body/#facebook`, token overrides, then `background-color: transparent` on all
+  structural containers (div/section/nav/li/table/etc.) so the black root shows through everywhere.
+  Deliberately does NOT clear `background-image` (preserves avatars/photos). Restores Messenger-blue
+  accent (bubbles, Send) + faint input backgrounds for usability.
+- Cut **v0.1.4**.
+- **Note on iteration:** tuning userstyles via full releases is slow. Faster loops to offer the user:
+  (a) `npm start` re-applies the CSS instantly; (b) optionally host userstyles on kausapp.com and have
+  the app fetch them at runtime (decouples theme tweaks from app releases).
+
 ### 2026-06-10 — Pure black (OLED) theme → v0.1.3
 - Added **View → "Pure black (OLED) theme"** toggle. Injects `src/main/userstyle-oled.css` which
   forces Messenger's dark surfaces to true `#000` (overrides FB design-token CSS vars + html/body +
