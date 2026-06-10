@@ -68,6 +68,18 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Compact chat list (collapse left menu to icons) — experimental
+- Added a **View → "Compact chat list (icons only)"** checkbox that injects a userstyle collapsing
+  Messenger's left conversation list to an avatar-only rail. Persisted in `userData/settings.json`.
+- New files/wiring: `src/main/userstyle-compact.css` (the CSS), plus settings load/save +
+  `applyCompactSidebar()` (insertCSS/removeInsertedCSS) + re-apply on `did-finish-load` + the menu
+  toggle in `main.js`.
+- **Caveat:** messenger.com classes are obfuscated, so the CSS targets `role`/`aria-label="Chats"`
+  selectors (more stable) — but it's **unverified visually** (can't reach the logged-in DOM from
+  the build env). Needs the user to test via `npm start` and refine selectors from a screenshot /
+  DevTools. Not released yet (source only) to avoid burning a release on an unverified style.
+- Settings module (`loadSettings`/`saveSettings`) is now reusable for future prefs.
+
 ### 2026-06-10 — Fix "app is damaged" (ad-hoc signing) → v0.1.1
 - User hit **"Kausapp is damaged and can't be opened"** when installing the downloaded dmg. Cause:
   the app was **entirely unsigned**; macOS (esp. Apple Silicon) flags unsigned quarantined downloads

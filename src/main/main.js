@@ -49,6 +49,51 @@ let tray = null;
 let isQuitting = false;
 
 // ---------------------------------------------------------------------------
+// Settings persistence (userData/settings.json) — small key/value preferences.
+// ---------------------------------------------------------------------------
+const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
+
+function loadSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(settingsFile(), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveSettings(patch) {
+  try {
+    const next = { ...loadSettings(), ...patch };
+    fs.writeFileSync(settingsFile(), JSON.stringify(next));
+  } catch {
+    /* best-effort */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Compact chat list: inject a userstyle that collapses Messenger's left
+// conversation list to an avatar-only rail. Toggleable + persisted.
+// ---------------------------------------------------------------------------
+const COMPACT_CSS_PATH = path.join(__dirname, 'userstyle-compact.css');
+let compactCssKey = null; // insertCSS handle, so we can remove it on toggle-off
+
+async function applyCompactSidebar(enable) {
+  if (!mainWindow) return;
+  const wc = mainWindow.webContents;
+  try {
+    if (enable && compactCssKey === null) {
+      const css = fs.readFileSync(COMPACT_CSS_PATH, 'utf8');
+      compactCssKey = await wc.insertCSS(css);
+    } else if (!enable && compactCssKey !== null) {
+      await wc.removeInsertedCSS(compactCssKey);
+      compactCssKey = null;
+    }
+  } catch {
+    /* best-effort — page may not be ready */
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Window state persistence (size + position) — stored in userData/window-state.json
 // ---------------------------------------------------------------------------
 const windowStateFile = () => path.join(app.getPath('userData'), 'window-state.json');
@@ -157,6 +202,12 @@ function createWindow() {
   mainWindow.on('resize', saveWindowState);
   mainWindow.on('move', saveWindowState);
 
+  // Re-apply userstyles after every (re)load — inserted CSS is per page load.
+  mainWindow.webContents.on('did-finish-load', () => {
+    compactCssKey = null; // previous handle is invalid after a load
+    if (loadSettings().compactSidebar) applyCompactSidebar(true);
+  });
+
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
@@ -241,6 +292,16 @@ function buildMenu() {
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Compact chat list (icons only)',
+          type: 'checkbox',
+          checked: !!loadSettings().compactSidebar,
+          click: (item) => {
+            saveSettings({ compactSidebar: item.checked });
+            applyCompactSidebar(item.checked);
+          }
+        },
+        { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },

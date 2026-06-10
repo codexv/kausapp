@@ -1,0 +1,40 @@
+/*
+ * Kausapp — "Compact chat list" userstyle.
+ *
+ * Collapses Messenger's left conversation list to a narrow rail of avatar
+ * icons (hides names / previews / timestamps). Toggle it from View → "Compact
+ * chat list (icons only)".
+ *
+ * NOTE: messenger.com ships obfuscated, frequently-changing class names, so we
+ * target the more stable role/aria attributes. If Meta changes the markup this
+ * may need tuning — adjust the selectors here and reload (Cmd/Ctrl+R).
+ */
+
+/* 1) Narrow the left "Chats" navigation column to an icon rail. */
+div[role="navigation"][aria-label="Chats"],
+div[aria-label="Chats"][role="navigation"] {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+  overflow-x: hidden !important;
+}
+
+/* 2) Center each conversation row and hide its text block (name, last
+ *    message, time) so only the circular avatar remains. */
+div[role="navigation"][aria-label="Chats"] [role="row"] {
+  justify-content: center !important;
+}
+div[role="navigation"][aria-label="Chats"] [role="row"] [role="gridcell"] a > div {
+  justify-content: center !important;
+}
+/* The text column is the sibling that follows the avatar inside the row link. */
+div[role="navigation"][aria-label="Chats"] [role="row"] [role="gridcell"] a > div > div:nth-child(2) {
+  display: none !important;
+}
+
+/* 3) Collapse the column header (search box, "Chats" title, filters) so the
+ *    rail stays tidy. Keep it scoped to the chats column only. */
+div[role="navigation"][aria-label="Chats"] label,
+div[role="navigation"][aria-label="Chats"] [role="search"] {
+  display: none !important;
+}
