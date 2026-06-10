@@ -1,0 +1,73 @@
+name: Build installers
+
+# Build Kausapp for macOS, Windows, and Linux.
+# - On every push to main / manual run: build all three and upload as artifacts.
+# - On a version tag (v*): also attach the installers to a GitHub Release.
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed to create/attach Releases on tags
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS
+          - os: windows-latest
+            name: Windows
+          - os: ubuntu-latest
+            name: Linux
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build installer
+        # electron-builder auto-detects the host OS and builds the matching target.
+        # --publish never: we attach to the Release explicitly in a later step.
+        run: npm run dist -- --publish never
+        env:
+          # No code-signing certs configured yet — build unsigned.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kausapp-${{ matrix.name }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.blockmap
+            release/latest*.yml
+
+      - name: Attach to Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.dmg
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.blockmap
+            release/latest*.yml

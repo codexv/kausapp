@@ -1,0 +1,57 @@
+{
+  "name": "kausapp",
+  "productName": "Kausapp",
+  "version": "0.1.0",
+  "description": "Kausapp — a cross-platform desktop client for Facebook Messenger, by Coders Republic (coders.ph)",
+  "license": "MIT",
+  "author": "Coders Republic (coders.ph)",
+  "homepage": "https://kausapp.coders.ph",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "electron-context-menu": "^4.0.4"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "ph.coders.kausapp",
+    "productName": "Kausapp",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.social-networking",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "category": "Network",
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.png"
+    }
+  }
+}

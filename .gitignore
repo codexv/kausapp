@@ -1,0 +1,11 @@
+node_modules/
+release/
+dist/
+*.log
+.DS_Store
+
+# Local versioned backups of edited files — kept on disk, not in the repo.
+backups/
+
+# Generated icon scratch
+assets/icon.iconset/
