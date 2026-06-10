@@ -8,12 +8,16 @@ const {
   Tray,
   nativeImage,
   session,
-  dialog
+  dialog,
+  ipcMain
 } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 
-const { initAutoUpdates } = require('./updater');
+const { initAutoUpdates, checkForUpdates } = require('./updater');
+
+// Where bug reports are submitted (Cloudflare Pages Function backed by KV).
+const REPORT_ENDPOINT = 'https://kausapp.com/api/report';
 
 // electron-context-menu is ESM-only (v4+), so it's loaded via dynamic import()
 // inside app.whenReady() rather than a top-level require.
@@ -311,7 +315,31 @@ function buildMenu() {
         { role: 'toggleDevTools' }
       ]
     },
-    { role: 'windowMenu' }
+    { role: 'windowMenu' },
+    {
+      role: 'help',
+      submenu: [
+        { label: `Kausapp v${app.getVersion()}`, enabled: false },
+        { type: 'separator' },
+        {
+          label: 'Check for Updates…',
+          click: () => checkForUpdates(() => mainWindow)
+        },
+        {
+          label: 'Report a Bug…',
+          click: () => openBugReport()
+        },
+        { type: 'separator' },
+        {
+          label: 'Kausapp Website',
+          click: () => shell.openExternal('https://kausapp.com')
+        },
+        {
+          label: 'Release Notes',
+          click: () => shell.openExternal('https://github.com/codexv/kausapp/releases')
+        }
+      ]
+    }
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -355,6 +383,87 @@ function buildTray() {
 }
 
 // ---------------------------------------------------------------------------
+// Bug reporting: capture a screenshot of the current app view + a description,
+// then POST to the backend (stored in KV; viewable on the admin page).
+// ---------------------------------------------------------------------------
+let reportWindow = null;
+let pendingScreenshot = '';
+
+async function openBugReport() {
+  if (!mainWindow) return;
+  if (reportWindow && !reportWindow.isDestroyed()) {
+    reportWindow.focus();
+    return;
+  }
+
+  // Capture the Messenger view BEFORE opening the modal so the report reflects
+  // what the user was looking at.
+  pendingScreenshot = '';
+  try {
+    const img = await mainWindow.webContents.capturePage();
+    pendingScreenshot = img.toDataURL();
+  } catch {
+    /* screenshot is best-effort */
+  }
+
+  reportWindow = new BrowserWindow({
+    width: 540,
+    height: 660,
+    parent: mainWindow,
+    modal: true,
+    title: 'Report a Bug',
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    backgroundColor: '#000000',
+    webPreferences: {
+      preload: path.join(__dirname, 'report-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  reportWindow.setMenuBarVisibility(false);
+  reportWindow.loadFile(path.join(__dirname, 'report.html'));
+  reportWindow.webContents.on('did-finish-load', () => {
+    if (reportWindow && !reportWindow.isDestroyed()) {
+      reportWindow.webContents.send('report:init', {
+        screenshot: pendingScreenshot,
+        version: app.getVersion(),
+        platform: process.platform
+      });
+    }
+  });
+  reportWindow.on('closed', () => { reportWindow = null; });
+}
+
+function registerReportIpc() {
+  ipcMain.handle('report:submit', async (event, payload) => {
+    const includeShot = !(payload && payload.includeScreenshot === false);
+    const body = {
+      description: String((payload && payload.description) || '').slice(0, 5000),
+      screenshot: includeShot ? pendingScreenshot : '',
+      version: app.getVersion(),
+      platform: process.platform
+    };
+    try {
+      const res = await fetch(REPORT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok && data.ok === true, error: data.error };
+    } catch (err) {
+      return { ok: false, error: String((err && err.message) || err) };
+    }
+  });
+
+  ipcMain.on('report:close', () => {
+    if (reportWindow && !reportWindow.isDestroyed()) reportWindow.close();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // App lifecycle
 // ---------------------------------------------------------------------------
 app.on('second-instance', () => {
@@ -366,7 +475,16 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(async () => {
+  // Show version + publisher in the native About panel.
+  app.setAboutPanelOptions({
+    applicationName: 'Kausapp',
+    applicationVersion: app.getVersion(),
+    version: app.getVersion(),
+    copyright: 'Coders Republic — coders.ph'
+  });
+
   configurePermissions();
+  registerReportIpc();
 
   // Right-click context menu with copy/paste, "open link externally", etc.
   // electron-context-menu is ESM-only, so load it dynamically.

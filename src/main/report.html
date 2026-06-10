@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
+  <title>Report a Bug</title>
+  <style>
+    :root { --blue: #1456ff; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0e1a; color: #fff; padding: 22px; height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    h1 { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+    p.sub { font-size: 12.5px; color: #9fb3d8; margin-bottom: 16px; }
+    label { font-size: 12px; font-weight: 600; color: #cfe0ff; display: block; margin-bottom: 6px; }
+    textarea {
+      width: 100%; flex: 1; min-height: 120px; resize: none;
+      background: rgba(255,255,255,0.06); color: #fff;
+      border: 1px solid rgba(59,130,246,0.4); border-radius: 10px;
+      padding: 12px; font-family: inherit; font-size: 14px; line-height: 1.5;
+    }
+    textarea:focus { outline: none; border-color: var(--blue); }
+    .shot { margin: 14px 0; }
+    .shot-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .shot-row input { width: 15px; height: 15px; accent-color: var(--blue); }
+    .shot-row label { margin: 0; font-weight: 500; color: #fff; font-size: 13px; }
+    .preview {
+      width: 100%; height: 150px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+      background: #000 center/contain no-repeat; background-size: contain;
+    }
+    .meta { font-size: 11px; color: #7d8db0; margin-top: 6px; }
+    .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    button {
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      padding: 11px 20px; border-radius: 10px; border: none; cursor: pointer;
+    }
+    .cancel { background: rgba(255,255,255,0.1); color: #fff; }
+    .send { background: var(--blue); color: #fff; }
+    .send:disabled { opacity: 0.5; cursor: default; }
+    .status { font-size: 12.5px; margin-top: 10px; min-height: 16px; color: #9fb3d8; text-align: right; }
+  </style>
+</head>
+<body>
+  <h1>Report a Bug</h1>
+  <p class="sub">Tell us what went wrong. A screenshot of the app is attached automatically.</p>
+
+  <label for="desc">What happened?</label>
+  <textarea id="desc" placeholder="Describe the bug, what you expected, and the steps to reproduce it…" autofocus></textarea>
+
+  <div class="shot">
+    <div class="shot-row">
+      <input type="checkbox" id="incShot" checked />
+      <label for="incShot">Attach screenshot</label>
+    </div>
+    <div class="preview" id="preview"></div>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <div class="actions">
+    <button class="cancel" id="cancel">Cancel</button>
+    <button class="send" id="send">Send report</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <script>
+    var screenshot = '';
+    var preview = document.getElementById('preview');
+    var incShot = document.getElementById('incShot');
+    var statusEl = document.getElementById('status');
+    var sendBtn = document.getElementById('send');
+
+    window.reportAPI.onInit(function (data) {
+      screenshot = data.screenshot || '';
+      if (screenshot) preview.style.backgroundImage = 'url("' + screenshot + '")';
+      else { preview.textContent = ''; incShot.checked = false; }
+      document.getElementById('meta').textContent =
+        'Kausapp v' + (data.version || '?') + ' · ' + (data.platform || '');
+    });
+
+    incShot.addEventListener('change', function () {
+      preview.style.opacity = incShot.checked ? '1' : '0.3';
+    });
+
+    document.getElementById('cancel').addEventListener('click', function () {
+      window.reportAPI.close();
+    });
+
+    sendBtn.addEventListener('click', async function () {
+      var desc = document.getElementById('desc').value.trim();
+      if (!desc) { statusEl.textContent = 'Please describe the bug first.'; return; }
+      sendBtn.disabled = true;
+      statusEl.textContent = 'Sending…';
+      try {
+        var res = await window.reportAPI.submit({
+          description: desc,
+          includeScreenshot: incShot.checked
+        });
+        if (res && res.ok) {
+          statusEl.textContent = '✓ Thanks! Report sent.';
+          setTimeout(function () { window.reportAPI.close(); }, 900);
+        } else {
+          statusEl.textContent = 'Failed to send' + (res && res.error ? ': ' + res.error : '') + '. Try again.';
+          sendBtn.disabled = false;
+        }
+      } catch (e) {
+        statusEl.textContent = 'Error sending report. Try again.';
+        sendBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

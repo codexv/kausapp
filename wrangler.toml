@@ -8,3 +8,8 @@ pages_build_output_dir = "site"
 [[kv_namespaces]]
 binding = "SUBSCRIBERS"
 id = "931015b6e7054ed386a825f5188e0979"
+
+# KV namespace that stores in-app bug reports (key: "report:<ts>-<uuid>").
+[[kv_namespaces]]
+binding = "REPORTS"
+id = "ce3a8a24c91b4797a3dedf4d78e3fb7c"

@@ -68,6 +68,28 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Check for Updates menu + version display + bug reporting → v0.1.2
+- **Check for Updates…** added under the **Help** menu. `updater.js` reworked to expose a manual
+  `checkForUpdates()` that shows dialogs (checking → "up to date" / "update available" / error). The
+  background auto-check (launch + 6h) is unchanged.
+- **Version display:** Help menu shows `Kausapp v<version>` (disabled label), plus website +
+  release-notes links; native **About panel** populated via `app.setAboutPanelOptions`.
+- **Report a Bug…** (Help menu): captures a screenshot of the current Messenger view
+  (`capturePage()`), opens a modal window (`report.html` + `report-preload.js`) with a description
+  box + screenshot preview + "attach screenshot" toggle, then POSTs to `/api/report`.
+  - Backend: `functions/api/report.js` Pages Function stores reports in new KV namespace **REPORTS**
+    (`ce3a8a24c91b4797a3dedf4d78e3fb7c`), key `report:<ts>-<uuid>`, value includes description,
+    screenshot data URL (capped ~6MB), version, platform, ua, country. Tested live (200/ok), KV clean.
+- Bumped **0.1.1 → 0.1.2**; cutting the release so the installed app can pull it via Check for Updates.
+- **Correction (re: earlier macOS note):** ad-hoc/self-signed macOS auto-update CAN apply as long as
+  old+new builds share a consistent signing identity (user confirmed it works on their RAVEIRC app).
+  Will verify empirically on v0.1.2; if the ad-hoc per-build signature fails Squirrel's check, switch
+  to a stable self-signed cert (no paid Apple account needed).
+- **Admin (pending):** decided design = **admin.kausapp.com → droplet's Tailscale IP (DNS-only)**, so
+  only tailnet devices can reach it. To build next: admin viewer app on the tailscale droplet reading
+  the REPORTS KV, + the DNS record. (A public CF URL can't be Tailscale-gated; this routes the
+  hostname to a private 100.x IP instead.)
+
 ### 2026-06-10 — Compact chat list (collapse left menu to icons) — experimental
 - Added a **View → "Compact chat list (icons only)"** checkbox that injects a userstyle collapsing
   Messenger's left conversation list to an avatar-only rail. Persisted in `userData/settings.json`.
