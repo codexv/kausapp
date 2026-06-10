@@ -68,6 +68,16 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Remote-hosted userstyles → v0.1.5 (theme tweaks need no app release)
+- Userstyles now **fetched from kausapp.com at runtime**, with the bundled `src/main/userstyle-*.css`
+  as offline fallback. `main.js`: added `loadStyleCss(name, localPath)` (fetch
+  `https://kausapp.com/styles/<name>.css?t=<ts>` no-store → text, else local file); `toggleUserStyle`
+  now takes a style name.
+- Published `site/styles/oled.css` + `site/styles/compact.css` (served, verified HTTP 200).
+- Cut **v0.1.5**. **From now on, theme iteration = edit `site/styles/*.css` + `wrangler pages deploy
+  --branch main`; users just reload the app (toggle off/on or Cmd/Ctrl+R) — no new release.**
+  Keep `site/styles/*` and `src/main/userstyle-*` in sync (bundled = fallback).
+
 ### 2026-06-10 — OLED theme: force ALL surfaces black → v0.1.4
 - User reported OLED wasn't fully black (token overrides missed surfaces). Rewrote
   `userstyle-oled.css` to the robust "transparent containers over a black root" technique:

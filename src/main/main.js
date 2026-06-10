@@ -86,14 +86,40 @@ const OLED_CSS_PATH = path.join(__dirname, 'userstyle-oled.css');
 let compactCssKey = null; // insertCSS handle, so we can remove it on toggle-off
 let oledCssKey = null;
 
-// Generic userstyle toggle: insert a CSS file and remember the handle so we can
-// remove it again. `keyRef` is a {value} box holding the current insertCSS key.
-async function toggleUserStyle(cssPath, keyRef, enable) {
+// Userstyles are hosted on kausapp.com so the theme can be tuned without an app
+// release. We fetch the latest at apply time and fall back to the bundled copy
+// when offline / the fetch fails.
+const REMOTE_STYLE = {
+  compact: 'https://kausapp.com/styles/compact.css',
+  oled: 'https://kausapp.com/styles/oled.css'
+};
+
+async function loadStyleCss(name, localPath) {
+  try {
+    const res = await fetch(`${REMOTE_STYLE[name]}?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const css = await res.text();
+      if (css && css.trim()) return css;
+    }
+  } catch {
+    /* offline / fetch failed — fall back to bundled copy */
+  }
+  try {
+    return fs.readFileSync(localPath, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+// Generic userstyle toggle: insert CSS (remote-with-local-fallback) and remember
+// the handle so we can remove it again. `keyRef` is a {value} box.
+async function toggleUserStyle(name, cssPath, keyRef, enable) {
   if (!mainWindow) return;
   const wc = mainWindow.webContents;
   try {
     if (enable && keyRef.value === null) {
-      keyRef.value = await wc.insertCSS(fs.readFileSync(cssPath, 'utf8'));
+      const css = await loadStyleCss(name, cssPath);
+      if (css) keyRef.value = await wc.insertCSS(css);
     } else if (!enable && keyRef.value !== null) {
       await wc.removeInsertedCSS(keyRef.value);
       keyRef.value = null;
@@ -106,8 +132,8 @@ async function toggleUserStyle(cssPath, keyRef, enable) {
 const compactRef = { get value() { return compactCssKey; }, set value(v) { compactCssKey = v; } };
 const oledRef = { get value() { return oledCssKey; }, set value(v) { oledCssKey = v; } };
 
-function applyCompactSidebar(enable) { return toggleUserStyle(COMPACT_CSS_PATH, compactRef, enable); }
-function applyOledTheme(enable) { return toggleUserStyle(OLED_CSS_PATH, oledRef, enable); }
+function applyCompactSidebar(enable) { return toggleUserStyle('compact', COMPACT_CSS_PATH, compactRef, enable); }
+function applyOledTheme(enable) { return toggleUserStyle('oled', OLED_CSS_PATH, oledRef, enable); }
 
 // ---------------------------------------------------------------------------
 // Window state persistence (size + position) — stored in userData/window-state.json
