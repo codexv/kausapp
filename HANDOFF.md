@@ -68,6 +68,20 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — kausapp.com LIVE
+- Resolved the custom-domain DNS blocker. First DNS-edit token the user supplied was scoped to the
+  `coders.ph` zone only (auth error on kausapp.com). User updated the token to cover kausapp.com.
+- Via the token (read from `~/.cf_token`, never echoed): zone had **0** DNS records (so the earlier
+  "pending" was simply no DNS at all). Created two proxied CNAMEs in zone
+  `44a1dccbe614e8ba2fbea9da6b465475`: `kausapp.com → kausapp.pages.dev` and
+  `www.kausapp.com → kausapp.pages.dev`.
+- Verified live: both apex and `www` return **HTTP 200 with valid SSL** and the correct page
+  (title + "Coming Soon"). (Local Tailscale resolver lagged on the new records; confirmed via public
+  resolver 1.1.1.1 + pinned Cloudflare edge IP.)
+- **kausapp.com is now serving the coming-soon page.** `kausapp.coders.ph` redirect + real email
+  capture still TODO.
+- Security: `~/.cf_token` removed after use; recommend rolling that Cloudflare token.
+
 ### 2026-06-10 — Coming-soon landing page (kausapp.com)
 - User registered **kausapp.com** on Cloudflare; wants a "coming soon" page.
 - Created **`site/`** — a self-contained static landing page:
