@@ -34,8 +34,8 @@ def gradient(size, top, bottom):
 
 
 def make_master():
-    # Indigo -> violet gradient (distinct from Messenger's blue/purple).
-    base = gradient(SIZE, (94, 53, 217), (164, 64, 214))
+    # Black -> blue gradient (brand colors: black & blue).
+    base = gradient(SIZE, (8, 10, 18), (20, 86, 255))
     img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     img.paste(base, (0, 0), rounded_mask(SIZE, RADIUS))
 
@@ -52,7 +52,7 @@ def make_master():
     dot_r = 48
     for cx in (400, 512, 624):
         d.ellipse([cx - dot_r, cy - dot_r, cx + dot_r, cy + dot_r],
-                  fill=(124, 58, 217, 255))
+                  fill=(20, 86, 255, 255))
 
     return img
 

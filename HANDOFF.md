@@ -68,6 +68,19 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Rebrand colors to black & blue
+- User disliked the purple theme → switched brand to **black & blue**, then specified the page
+  **background should be black** (not a blue gradient).
+- **Icon** (`assets/make_icon.py`): gradient changed indigo→violet ⇒ **black (8,10,18) → blue
+  (20,86,255)**; typing dots changed violet ⇒ **blue (20,86,255)**. Regenerated
+  `icon.png/icon_512.png/icon.ico/icon.icns`; copied PNGs to `site/`.
+- **Landing page** (`site/index.html`): body background now **solid black** with subtle blue radial
+  glows (behind logo + rising from bottom); accents (button, badge, pills, links, dots, logo glow)
+  switched to blue (`--blue #1456ff`). Removed the old gradient `drift` animation.
+- Redeployed to Cloudflare Pages (production). Verified kausapp.com serves the black-bg/blue page;
+  old purple (`a440d6`) removed.
+- App icon used in installers is now black/blue too (consistent brand). No rebuild cut yet.
+
 ### 2026-06-10 — Dropped kausapp.coders.ph; kausapp.com is the sole canonical domain
 - Per user: move everything to kausapp.com and drop kausapp.coders.ph.
 - `kausapp.coders.ph` was never actually created (no DNS record existed) — it was only a *planned*
