@@ -147,7 +147,16 @@
       font-size: 13px;
       opacity: 0.72;
     }
-    footer a { color: #fff; text-decoration: none; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.4); }
+    footer a { color: #fff; text-decoration: none; font-weight: 600; }
+    footer .by { opacity: 0.85; }
+    .cr-logo {
+      display: inline-block;
+      height: 30px; width: auto;
+      margin-top: 10px;
+      opacity: 0.95;
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .cr-logo:hover { opacity: 1; transform: translateY(-1px); }
     .disclaimer { margin-top: 10px; font-size: 11px; opacity: 0.5; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5; }
   </style>
 </head>
@@ -175,7 +184,10 @@
     <p class="note" id="note">Be the first to know when we launch.</p>
 
     <footer>
-      Built with ❤️ by <a href="https://coders.ph" target="_blank" rel="noopener">Coders Republic</a>
+      <div class="by">Built with ❤️ by</div>
+      <a href="https://coders.ph" target="_blank" rel="noopener" aria-label="Coders Republic">
+        <img class="cr-logo" src="/coders-logo-white.png" alt="Coders Republic" />
+      </a>
       <div class="disclaimer">
         Not affiliated with or endorsed by Meta. “Facebook” and “Messenger” are trademarks of
         Meta Platforms, Inc. Kausapp is an independent client for the official Messenger web app.

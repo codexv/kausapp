@@ -68,6 +68,16 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Coders Republic logo in footers + download→home link
+- coders.ph only ships `logo-full-white.png` which is actually a **dark** logo (for light bgs).
+  Generated a **white-knockout** version (`site/coders-logo-white.png`, white text + brand-red "o")
+  via PIL for our black footers. Removed the unused dark source from `site/`.
+- Replaced the "Coders Republic" text link with the logo (linked to coders.ph) in both
+  `site/index.html` and `site/download/index.html` footers.
+- Added a **"← Back to home"** link (top-left) on the download page → `/`.
+- Deployed to production (note: must pass `--branch main` to wrangler or the deploy lands as a
+  preview and kausapp.com won't update). Verified logo + back-link live on kausapp.com.
+
 ### 2026-06-10 — Download page at /download (unlisted)
 - Added **`site/download/index.html`** → live at **https://kausapp.com/download**. Black/blue themed,
   OS-detected primary button + cards for all platforms (mac arm64/intel, win exe, linux AppImage/deb).
