@@ -68,6 +68,19 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Coming-soon landing page (kausapp.com)
+- User registered **kausapp.com** on Cloudflare; wants a "coming soon" page.
+- Created **`site/`** — a self-contained static landing page:
+  - `site/index.html` — branded (indigo→violet gradient matching the icon), animated logo,
+    "Coming Soon" badge, tagline, platform pills (macOS/Windows/Linux), email "Notify me" form
+    (currently `mailto:hello@coders.ph` — swap for a real list before launch), Coders Republic
+    footer, Meta non-affiliation disclaimer, Open Graph/social meta + favicon.
+  - `site/icon.png`, `site/icon_512.png` — copied from assets for the page + social preview.
+- Deployment: tooling check — `wrangler` not installed (use `npx`), no `CLOUDFLARE_API_TOKEN` in
+  env, `cloudflared` present. **Deploy requires the user's Cloudflare auth** → pending choice of
+  method (wrangler+token / Pages git-integration / droplet). Page committed to the repo so
+  Cloudflare Pages can build from `site/`.
+
 ### 2026-06-10 — Monetization strategy documented
 - User plans to acquire **kausapp.com** and wants the project monetized; asked for insights.
 - Created **`MONETIZATION.md`** capturing the full strategy. Core constraint: cannot legally
