@@ -1,0 +1,49 @@
+/*
+ * Kausapp — Pure Black (OLED) theme.
+ *
+ * Forces Messenger's surfaces to true black (#000) — great for OLED screens.
+ * Enable Messenger's own Dark mode first (gear / settings) for the best result;
+ * this restyles the dark palette to pure black rather than dark gray.
+ *
+ * Toggle from View → "Pure black (OLED) theme".
+ *
+ * messenger.com uses Facebook design-token CSS variables for theming, which are
+ * fairly stable — we override those plus the root surfaces. If Meta changes the
+ * tokens this may need tuning; adjust here and reload (Cmd/Ctrl+R).
+ */
+
+html, body {
+  background: #000 !important;
+}
+
+/* Override Facebook/Messenger dark-theme design tokens to black. */
+:root {
+  --web-wash: #000 !important;
+  --wash: #000 !important;
+  --surface-background: #000 !important;
+  --card-background: #000 !important;
+  --messenger-card-background: #000 !important;
+  --message-list-background: #000 !important;
+  --comment-background: #050505 !important;
+  --material-background: #000 !important;
+  --base-overlay-background: #000 !important;
+  --dialog-view-background: #000 !important;
+  --popover-background: #0a0a0a !important;
+  --menu-background: #0a0a0a !important;
+  --highlight-bg: #0d0d0d !important;
+  --hover-overlay: rgba(255,255,255,0.06) !important;
+  --left-nav-background: #000 !important;
+  --secondary-button-background: #141414 !important;
+  --primary-deemphasized-button-background: #141414 !important;
+  --secondary-wash: #0a0a0a !important;
+  --negative-feedback-background: #000 !important;
+  --shadow-2: 0 0 0 1px rgba(255,255,255,0.06) !important;
+}
+
+/* Belt-and-suspenders: pull the very common FB dark grays down to black. */
+[style*="background-color: rgb(36, 37, 38)"],
+[style*="background-color: rgb(24, 25, 26)"],
+[style*="background-color: rgb(0, 0, 0)"],
+[style*="background-color: rgb(58, 59, 60)"] {
+  background-color: #000 !important;
+}

@@ -68,6 +68,16 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-10 — Pure black (OLED) theme → v0.1.3
+- Added **View → "Pure black (OLED) theme"** toggle. Injects `src/main/userstyle-oled.css` which
+  forces Messenger's dark surfaces to true `#000` (overrides FB design-token CSS vars + html/body +
+  common dark grays). Best with Messenger's own Dark mode on. Persisted via `oledTheme` setting.
+- Refactored userstyle injection into a generic `toggleUserStyle()` helper (used by both compact
+  sidebar and OLED), re-applied on `did-finish-load`.
+- Cut **v0.1.3** batching the OLED theme + the 90% default zoom so they're testable via Check for
+  Updates. (Userstyles default OFF, so no impact unless toggled; still unverified blind — refine
+  selectors from a screenshot if they look off.)
+
 ### 2026-06-10 — Admin scaffolding, website on droplet, web-dev docs, smaller default zoom
 - **Droplet web dev**: uploaded the website dev files to `irc.coders.ph:~/Kausapp/website/`
   (`site/`, `functions/`, `wrangler.toml`) so web dev can continue from the droplet. Droplet has

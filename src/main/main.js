@@ -82,23 +82,32 @@ function saveSettings(patch) {
 // conversation list to an avatar-only rail. Toggleable + persisted.
 // ---------------------------------------------------------------------------
 const COMPACT_CSS_PATH = path.join(__dirname, 'userstyle-compact.css');
+const OLED_CSS_PATH = path.join(__dirname, 'userstyle-oled.css');
 let compactCssKey = null; // insertCSS handle, so we can remove it on toggle-off
+let oledCssKey = null;
 
-async function applyCompactSidebar(enable) {
+// Generic userstyle toggle: insert a CSS file and remember the handle so we can
+// remove it again. `keyRef` is a {value} box holding the current insertCSS key.
+async function toggleUserStyle(cssPath, keyRef, enable) {
   if (!mainWindow) return;
   const wc = mainWindow.webContents;
   try {
-    if (enable && compactCssKey === null) {
-      const css = fs.readFileSync(COMPACT_CSS_PATH, 'utf8');
-      compactCssKey = await wc.insertCSS(css);
-    } else if (!enable && compactCssKey !== null) {
-      await wc.removeInsertedCSS(compactCssKey);
-      compactCssKey = null;
+    if (enable && keyRef.value === null) {
+      keyRef.value = await wc.insertCSS(fs.readFileSync(cssPath, 'utf8'));
+    } else if (!enable && keyRef.value !== null) {
+      await wc.removeInsertedCSS(keyRef.value);
+      keyRef.value = null;
     }
   } catch {
     /* best-effort — page may not be ready */
   }
 }
+
+const compactRef = { get value() { return compactCssKey; }, set value(v) { compactCssKey = v; } };
+const oledRef = { get value() { return oledCssKey; }, set value(v) { oledCssKey = v; } };
+
+function applyCompactSidebar(enable) { return toggleUserStyle(COMPACT_CSS_PATH, compactRef, enable); }
+function applyOledTheme(enable) { return toggleUserStyle(OLED_CSS_PATH, oledRef, enable); }
 
 // ---------------------------------------------------------------------------
 // Window state persistence (size + position) — stored in userData/window-state.json
@@ -211,8 +220,11 @@ function createWindow() {
 
   // Re-apply userstyles after every (re)load — inserted CSS is per page load.
   mainWindow.webContents.on('did-finish-load', () => {
-    compactCssKey = null; // previous handle is invalid after a load
-    if (loadSettings().compactSidebar) applyCompactSidebar(true);
+    compactCssKey = null; // previous handles are invalid after a load
+    oledCssKey = null;
+    const s = loadSettings();
+    if (s.compactSidebar) applyCompactSidebar(true);
+    if (s.oledTheme) applyOledTheme(true);
     // Default the app one step smaller than 100% (90%) for a denser, more
     // native feel. Respects a saved zoomFactor if the user changed it.
     const z = loadSettings().zoomFactor;
@@ -310,6 +322,15 @@ function buildMenu() {
           click: (item) => {
             saveSettings({ compactSidebar: item.checked });
             applyCompactSidebar(item.checked);
+          }
+        },
+        {
+          label: 'Pure black (OLED) theme',
+          type: 'checkbox',
+          checked: !!loadSettings().oledTheme,
+          click: (item) => {
+            saveSettings({ oledTheme: item.checked });
+            applyOledTheme(item.checked);
           }
         },
         { type: 'separator' },
