@@ -45,6 +45,18 @@ html, body, #facebook {
   background-image: none !important;
 }
 
+/* 4b) Remove the per-conversation gradient/wallpaper "chat theme" (the colored
+ *     background in the message area). We clear gradient backgrounds only —
+ *     avatar/photo backgrounds are url(...) images and are left untouched. */
+[style*="gradient" i] {
+  background-image: none !important;
+  background-color: #000 !important;
+}
+[style*="linear-gradient" i],
+[style*="radial-gradient" i] {
+  background: #000 !important;
+}
+
 /* 5) Kill gray divider lines / drop shadows that look off on pure black. */
 :where(div, header, footer, ul, li, section) {
   box-shadow: none !important;
