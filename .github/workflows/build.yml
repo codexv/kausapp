@@ -38,17 +38,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build installer
-        # electron-builder auto-detects the host OS and builds the matching target.
-        # --publish never: we attach to the Release explicitly in a later step.
+      # macOS: sign every build with the SAME self-signed cert so in-place
+      # auto-updates work (Squirrel.Mac needs a stable identity). Self-signed, so
+      # Gatekeeper still shows "unidentified developer" on first install.
+      - name: Build installer (macOS, signed)
+        if: matrix.name == 'macOS'
         run: npm run dist -- --publish never
         env:
-          # macOS only: sign every build with the SAME self-signed cert so
-          # in-place auto-updates work (Squirrel.Mac requires a stable identity).
-          # Empty on Windows/Linux (they build unsigned). The cert is self-signed,
-          # so Gatekeeper still shows "unidentified developer" on first install.
-          CSC_LINK: ${{ matrix.name == 'macOS' && secrets.CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.name == 'macOS' && secrets.CSC_KEY_PASSWORD || '' }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      # Windows/Linux: build unsigned. No CSC_* env at all (an empty CSC_LINK
+      # makes electron-builder treat it as a bad cert path on Windows).
+      - name: Build installer (Windows/Linux, unsigned)
+        if: matrix.name != 'macOS'
+        run: npm run dist -- --publish never
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
