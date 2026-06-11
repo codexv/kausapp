@@ -68,6 +68,9 @@ h1{font-size:22px;font-weight:800}
 .badge{display:inline-block;background:rgba(20,86,255,.18);border:1px solid rgba(59,130,246,.5);color:#cfe0ff;border-radius:999px;padding:2px 10px;font-size:11px;margin-right:6px}
 .shot img{width:100%;border-radius:10px;border:1px solid #22304f;cursor:zoom-in}
 .noshot{color:#5f6f92;font-size:12px;font-style:italic}
+#lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;cursor:zoom-out;align-items:center;justify-content:center;padding:24px}
+#lb.open{display:flex}
+#lb img{max-width:96vw;max-height:96vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .del{margin-top:10px;background:#3a1020;border:1px solid #5a1a2a;color:#ff9bb0;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit}
 a{color:#cfe0ff}
 @media(max-width:780px){.card{grid-template-columns:1fr}}
@@ -85,7 +88,7 @@ def render(reports):
         key = html.escape(str(r.get("_key", "")))
         shot = r.get("screenshot", "")
         shot_html = (
-            f'<a href="{html.escape(shot)}" target="_blank"><img src="{html.escape(shot)}" alt="screenshot"></a>'
+            f'<img class="shot-img" src="{html.escape(shot)}" alt="screenshot" loading="lazy">'
             if isinstance(shot, str) and shot.startswith("data:image/")
             else '<div class="noshot">No screenshot attached</div>'
         )
@@ -112,6 +115,18 @@ def render(reports):
 <style>{PAGE_CSS}</style></head><body>
 <header><h1>KausApp — Bug Reports</h1><span class="count">{len(reports)} report(s)</span></header>
 {body}
+<div id="lb"><img id="lbimg" alt="screenshot full size"></div>
+<script>
+  var lb = document.getElementById('lb'), lbimg = document.getElementById('lbimg');
+  document.addEventListener('click', function (e) {{
+    if (e.target.classList && e.target.classList.contains('shot-img')) {{
+      lbimg.src = e.target.src; lb.classList.add('open');
+    }} else if (e.target === lb || e.target === lbimg) {{
+      lb.classList.remove('open'); lbimg.src = '';
+    }}
+  }});
+  document.addEventListener('keydown', function (e) {{ if (e.key === 'Escape') {{ lb.classList.remove('open'); lbimg.src = ''; }} }});
+</script>
 </body></html>"""
 
 
