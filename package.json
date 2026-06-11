@@ -50,9 +50,7 @@
         { "target": "dmg", "arch": ["x64", "arm64"] },
         { "target": "zip", "arch": ["x64", "arm64"] }
       ],
-      "icon": "assets/icon.icns",
-      "identity": "KausApp Self-Signed",
-      "hardenedRuntime": false
+      "icon": "assets/icon.icns"
     },
     "win": {
       "target": [

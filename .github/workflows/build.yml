@@ -38,15 +38,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # macOS: sign every build with the SAME self-signed cert so in-place
-      # auto-updates work (Squirrel.Mac needs a stable identity). Self-signed, so
-      # Gatekeeper still shows "unidentified developer" on first install.
+      # macOS: import our consistent self-signed cert into a keychain so codesign
+      # (run from afterPack) can sign every build with the SAME identity — that's
+      # what lets macOS apply updates in place. electron-builder's own signing is
+      # disabled (it rejects untrusted self-signed certs); afterPack does it.
+      - name: Import macOS signing cert
+        if: matrix.name == 'macOS'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          KC="$RUNNER_TEMP/build.keychain-db"
+          echo "$CSC_LINK" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p actions "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p actions "$KC"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KC"
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security find-identity -v "$KC" || true
+
       - name: Build installer (macOS, signed)
         if: matrix.name == 'macOS'
         run: npm run dist -- --publish never
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # afterPack signs with this identity; disable electron-builder's own
+          # signing (it won't use an untrusted self-signed cert).
+          KAUSAPP_SIGN_IDENTITY: KausApp Self-Signed
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       # Windows/Linux: build unsigned. No CSC_* env at all (an empty CSC_LINK
       # makes electron-builder treat it as a bad cert path on Windows).

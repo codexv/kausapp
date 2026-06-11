@@ -16,22 +16,22 @@ const path = require('node:path');
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return;
 
-  // When a real signing cert is provided (CI via CSC_LINK), let electron-builder
-  // sign with that consistent identity instead — ad-hoc would override it and
-  // break in-place auto-updates. Only ad-hoc sign local/unsigned builds.
-  if (process.env.CSC_LINK) {
-    console.log('[afterPack] CSC_LINK present — skipping ad-hoc (electron-builder will sign with the cert)');
-    return;
-  }
-
   const appName = context.packager.appInfo.productFilename;
   const appPath = path.join(context.appOutDir, `${appName}.app`);
 
-  console.log(`[afterPack] ad-hoc signing ${appPath}`);
+  // Sign with our consistent self-signed identity when available (CI sets
+  // KAUSAPP_SIGN_IDENTITY after importing the cert into the keychain). codesign
+  // signs with an untrusted self-signed cert fine — and a STABLE identity across
+  // builds is what lets macOS apply updates in place. Locally (no identity) we
+  // ad-hoc sign ("-") just to avoid the "damaged" Gatekeeper error.
+  const identity = process.env.KAUSAPP_SIGN_IDENTITY || '-';
+  const label = identity === '-' ? 'ad-hoc' : `identity "${identity}"`;
+
+  console.log(`[afterPack] codesign (${label}) ${appPath}`);
   try {
-    execSync(`codesign --force --deep --sign - "${appPath}"`, { stdio: 'inherit' });
+    execSync(`codesign --force --deep --sign "${identity}" "${appPath}"`, { stdio: 'inherit' });
   } catch (err) {
-    console.error('[afterPack] ad-hoc signing failed:', err && err.message);
+    console.error('[afterPack] codesign failed:', err && err.message);
     throw err;
   }
 };
