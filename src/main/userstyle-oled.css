@@ -70,6 +70,17 @@ html, body, #facebook {
   background-color: transparent !important;
 }
 
+/* 4d) Many Messenger chat themes paint the gradient on a ::before/::after
+ *     PSEUDO-element behind the messages — unreachable by styling the element
+ *     itself. Clear pseudo-element backgrounds in the conversation + grid areas. */
+[role="main"]::before, [role="main"]::after,
+[role="main"] *::before, [role="main"] *::after,
+[role="grid"]::before, [role="grid"]::after,
+[role="grid"] *::before, [role="grid"] *::after {
+  background-image: none !important;
+  background: none !important;
+}
+
 /* 5) Kill gray divider lines / drop shadows that look off on pure black. */
 :where(div, header, footer, ul, li, section) {
   box-shadow: none !important;
