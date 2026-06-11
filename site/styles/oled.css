@@ -81,6 +81,18 @@ html, body, #facebook {
   background: none !important;
 }
 
+/* 4e) THE per-chat theme gradient. It's a full-bleed div whose colored
+ *     linear-gradient comes from a class + CSS variable (not inline style), and
+ *     it lives OUTSIDE [role="main"], so every earlier rule missed it. Target the
+ *     element by its Facebook utility-class signature and force it black.
+ *     (If Meta reshuffles these class hashes later, re-grab them via DevTools.) */
+.x9f619.x1ja2u2z.x1xsqp64.x18d0r48,
+.x9f619.x1ja2u2z.x18d0r48,
+.x9f619.x1xsqp64 {
+  background-image: none !important;
+  background: #000 !important;
+}
+
 /* 5) Kill gray divider lines / drop shadows that look off on pure black. */
 :where(div, header, footer, ul, li, section) {
   box-shadow: none !important;
