@@ -1,16 +1,16 @@
-# Kausapp — Messenger, back on your desktop
+# KausApp — Messenger, back on your desktop
 
-**Kausapp** is a fast, lightweight, cross-platform desktop client for **Facebook Messenger**,
+**KausApp** is a fast, lightweight, cross-platform desktop client for **Facebook Messenger**,
 built and maintained by **Coders Republic (coders.ph)**.
 
 When Facebook retired its official desktop Messenger app, millions of people were pushed back into a
-browser tab that gets lost, muted, and throttled. **Kausapp brings Messenger back to where it
+browser tab that gets lost, muted, and throttled. **KausApp brings Messenger back to where it
 belongs — a real desktop app** that runs natively on macOS, Windows, and Ubuntu Linux, stays logged
 in, and delivers your messages the instant they arrive.
 
 ---
 
-## Why Kausapp?
+## Why KausApp?
 
 - **No more lost browser tabs.** A dedicated app window with its own icon, tray presence, and
   notifications — not buried among 40 tabs.
@@ -20,7 +20,7 @@ in, and delivers your messages the instant they arrive.
   Ubuntu workstation.
 - **Lightweight & focused.** It does one thing — Messenger — and does it cleanly, without the weight
   of a full browser.
-- **Private & direct.** Kausapp talks straight to the official Messenger service. No middle-man
+- **Private & direct.** KausApp talks straight to the official Messenger service. No middle-man
   servers, no analytics layer, no scraping — your conversations stay between you and Meta, exactly
   as they would in the browser.
 
@@ -29,7 +29,7 @@ in, and delivers your messages the instant they arrive.
 ## The name
 
 *Kausap* is the Filipino word for **"the person you're talking with"** — and **"to converse."** The
-doubled final letter in **Kausapp** quietly embeds *app*: a chat app you talk to people on. Proudly
+doubled final letter in **KausApp** quietly embeds *app*: a chat app you talk to people on. Proudly
 built in the Philippines by Coders Republic.
 
 ---
@@ -83,7 +83,7 @@ built in the Philippines by Coders Republic.
 
 - Built on **Electron**, wrapping the official `messenger.com` web app — the only stable,
   policy-safe path to Messenger's complete, always-up-to-date feature set. When Meta ships a new
-  Messenger feature, it appears in Kausapp automatically.
+  Messenger feature, it appears in KausApp automatically.
 - Packaged with **electron-builder** for true single-codebase, multi-platform installers.
 - Hardened renderer (context isolation on, Node integration off) with a scoped permission model —
   microphone, camera, and notifications are granted to Messenger; everything else is denied by
@@ -95,10 +95,10 @@ built in the Philippines by Coders Republic.
 
 ## Privacy & security
 
-- Kausapp adds **no servers of its own** — it connects directly to Meta's official Messenger
+- KausApp adds **no servers of its own** — it connects directly to Meta's official Messenger
   service, the same endpoint your browser uses.
 - **No telemetry, no tracking, no ad layer** injected by the app.
-- Your messages, media, and login are handled by Messenger itself; Kausapp is simply the window.
+- Your messages, media, and login are handled by Messenger itself; KausApp is simply the window.
 
 ---
 
@@ -114,11 +114,11 @@ built in the Philippines by Coders Republic.
 
 ## Legal
 
-Kausapp is **not affiliated with, endorsed by, or sponsored by Meta Platforms, Inc.** "Facebook" and
-"Messenger" are trademarks of Meta Platforms, Inc. Kausapp is an independent desktop client that
+KausApp is **not affiliated with, endorsed by, or sponsored by Meta Platforms, Inc.** "Facebook" and
+"Messenger" are trademarks of Meta Platforms, Inc. KausApp is an independent desktop client that
 loads the official Messenger web app and does not modify, intercept, or store the contents of your
 conversations.
 
 ---
 
-<p align="center"><b>Kausapp</b> — built with ❤️ by <a href="https://coders.ph">Coders Republic</a> · coders.ph</p>
+<p align="center"><b>KausApp</b> — built with ❤️ by <a href="https://coders.ph">Coders Republic</a> · coders.ph</p>

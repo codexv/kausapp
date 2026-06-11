@@ -1,4 +1,4 @@
-# Kausapp Bug-Report Admin (Tailscale-only)
+# KausApp Bug-Report Admin (Tailscale-only)
 
 A tiny, dependency-free **Python (stdlib)** web app that lists the in-app bug reports submitted via
 `POST /api/report`. It reads them from the Cloudflare **REPORTS** KV namespace and renders a page
@@ -24,8 +24,8 @@ admin.kausapp.com  --(DNS A, DNS-only/grey-cloud)-->  100.99.99.75 : 8080  (only
 ## Deploy on the droplet
 
 ```bash
-# 1) Files live at ~/Kausapp/admin (uploaded from the repo's admin/).
-cd ~/Kausapp/admin
+# 1) Files live at ~/KausApp/admin (uploaded from the repo's admin/).
+cd ~/KausApp/admin
 
 # 2) Config: create the env file with a Cloudflare API token that has
 #    "Account -> Workers KV Storage -> Read" (Edit to enable the Delete button).

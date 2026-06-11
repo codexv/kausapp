@@ -1,8 +1,8 @@
 {
   "name": "kausapp",
-  "productName": "Kausapp",
-  "version": "0.1.7",
-  "description": "Kausapp — a cross-platform desktop client for Facebook Messenger, by Coders Republic (coders.ph)",
+  "productName": "KausApp",
+  "version": "0.1.8",
+  "description": "KausApp — a cross-platform desktop client for Facebook Messenger, by Coders Republic (coders.ph)",
   "license": "MIT",
   "author": "Coders Republic (coders.ph)",
   "homepage": "https://kausapp.com",
@@ -26,7 +26,7 @@
   },
   "build": {
     "appId": "ph.coders.kausapp",
-    "productName": "Kausapp",
+    "productName": "KausApp",
     "directories": {
       "output": "release",
       "buildResources": "assets"

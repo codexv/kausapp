@@ -68,6 +68,23 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-11 — Rebrand display name Kausapp → KausApp (capital A) → v0.1.8
+- Changed the **display name** everywhere to **KausApp** (app UI, dialogs, About, report window,
+  website pages, ABOUT/README/WEBDEV/MONETIZATION docs, admin page title, Caddy/systemd descriptions,
+  userstyle comments). Bulk `sed 's/Kausapp/KausApp/g'` on those files.
+- **Deliberately left lowercase identifiers unchanged** (changing them would break things): npm
+  `name` `kausapp`, `appId` `ph.coders.kausapp` (update continuity), GitHub repo `kausapp`, domain
+  `kausapp.com`, Pages project `kausapp`, KV namespace ids, the droplet path `~/Kausapp/`, and the
+  **existing v0.1.0 release asset URLs** in `site/download/index.html` fallback links.
+- HANDOFF prior entries left as-is (historical; also reference the real `~/Kausapp/` path).
+- New build artifacts will be `KausApp-<ver>.dmg`, `KausApp Setup <ver>.exe`, etc. ⚠️ macOS bundle
+  name changes `Kausapp.app`→`KausApp.app`, so the v0.1.7→v0.1.8 auto-update may not apply in place on
+  mac — users likely re-download v0.1.8 once from the site (Win/Linux: may leave the old install).
+- **Blocker hit:** local `wrangler pages deploy` fails ("fetch failed") because this Mac is on
+  Tailscale (same Node-network issue as the app). git push + ssh + GitHub CI are unaffected. Website
+  rebrand deploy is committed/ready; needs one wrangler run from a non-Tailscale moment (or add a CF
+  token to GH Actions to deploy the site from CI).
+
 ### 2026-06-11 — Fix "Restart now" not restarting (macOS) → v0.1.6
 - Bug: the update-downloaded "Restart now" button didn't restart on macOS. Cause: the window
   `close` handler hides the app (keep-alive) on mac, so `quitAndInstall()`'s window close was

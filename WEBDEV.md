@@ -1,8 +1,8 @@
-# Kausapp — Website Dev Guide
+# KausApp — Website Dev Guide
 
 How to develop and deploy the **kausapp.com** website (the coming-soon landing page, the unlisted
 `/download` page, and the serverless API). This same guide is uploaded to the droplet at
-`~/Kausapp/website/README.md` so web dev can be continued from there.
+`~/KausApp/website/README.md` so web dev can be continued from there.
 
 ## What the website is
 
@@ -69,7 +69,7 @@ The droplet has Python but **no Node**, so install Node first (one-time):
 # on the droplet (Ubuntu) — install Node LTS
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
-# then, from ~/Kausapp/website:
+# then, from ~/KausApp/website:
 npx wrangler login          # authorize (headless: use a Cloudflare API token instead — see below)
 npx wrangler pages deploy --branch main
 ```
@@ -86,7 +86,7 @@ npx wrangler pages deploy --branch main
 ## Source of truth & sync
 
 The canonical repo is **https://github.com/codexv/kausapp** (the website lives under `site/`,
-`functions/`, `wrangler.toml` at the repo root). The droplet copy in `~/Kausapp/website/` is a working
+`functions/`, `wrangler.toml` at the repo root). The droplet copy in `~/KausApp/website/` is a working
 copy for editing from there — keep them in sync via git (clone the repo on the droplet) or by copying
 changed files back. After any edit, redeploy with the wrangler command above.
 

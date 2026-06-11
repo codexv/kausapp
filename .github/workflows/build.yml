@@ -1,6 +1,6 @@
 name: Build installers
 
-# Build Kausapp for macOS, Windows, and Linux.
+# Build KausApp for macOS, Windows, and Linux.
 # - On every push to main / manual run: build all three and upload as artifacts.
 # - On a version tag (v*): also attach the installers to a GitHub Release.
 

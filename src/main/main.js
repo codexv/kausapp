@@ -196,7 +196,7 @@ function createWindow() {
     y: state.y,
     minWidth: 480,
     minHeight: 400,
-    title: 'Kausapp',
+    title: 'KausApp',
     icon: resolveIcon(),
     backgroundColor: '#ffffff',
     webPreferences: {
@@ -374,7 +374,7 @@ function buildMenu() {
     {
       role: 'help',
       submenu: [
-        { label: `Kausapp v${app.getVersion()}`, enabled: false },
+        { label: `KausApp v${app.getVersion()}`, enabled: false },
         { type: 'separator' },
         {
           label: 'Check for Updates…',
@@ -386,7 +386,7 @@ function buildMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Kausapp Website',
+          label: 'KausApp Website',
           click: () => shell.openExternal('https://kausapp.com')
         },
         {
@@ -408,11 +408,11 @@ function buildTray() {
   if (!icon) return; // no icon asset yet — skip tray until one exists
 
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
-  tray.setToolTip('Kausapp');
+  tray.setToolTip('KausApp');
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: 'Show Kausapp',
+        label: 'Show KausApp',
         click: () => {
           if (mainWindow) {
             mainWindow.show();
@@ -532,7 +532,7 @@ app.on('second-instance', () => {
 app.whenReady().then(async () => {
   // Show version + publisher in the native About panel.
   app.setAboutPanelOptions({
-    applicationName: 'Kausapp',
+    applicationName: 'KausApp',
     applicationVersion: app.getVersion(),
     version: app.getVersion(),
     copyright: 'Coders Republic — coders.ph'

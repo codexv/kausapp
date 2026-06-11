@@ -44,7 +44,7 @@ function wireEvents() {
         type: 'info',
         buttons: ['OK'],
         title: 'Update available',
-        message: `Kausapp ${info && info.version ? info.version : ''} is available.`,
+        message: `KausApp ${info && info.version ? info.version : ''} is available.`,
         detail: 'It’s downloading in the background — you’ll be asked to restart when it’s ready.'
       });
     }
@@ -59,7 +59,7 @@ function wireEvents() {
         buttons: ['OK'],
         title: 'You’re up to date',
         message: 'You’re up to date',
-        detail: `Kausapp ${app.getVersion()} is the latest version.`
+        detail: `KausApp ${app.getVersion()} is the latest version.`
       });
     }
   });
@@ -75,8 +75,8 @@ function wireEvents() {
       defaultId: 0,
       cancelId: 1,
       title: 'Update ready',
-      message: `Kausapp ${info && info.version ? info.version : ''} is ready to install.`,
-      detail: 'Restart Kausapp to apply it. It will also install automatically the next time you quit.'
+      message: `KausApp ${info && info.version ? info.version : ''} is ready to install.`,
+      detail: 'Restart KausApp to apply it. It will also install automatically the next time you quit.'
     });
     if (response === 0) {
       // Tell main.js we're really quitting so its macOS hide-on-close handler

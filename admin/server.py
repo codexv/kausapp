@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Kausapp bug-report admin — a tiny, dependency-free viewer.
+KausApp bug-report admin — a tiny, dependency-free viewer.
 
 Renders the bug reports submitted from the app. To avoid storing any Cloudflare
 credential on the droplet, it reads the reports through the secret-protected
@@ -33,7 +33,7 @@ BIND_PORT = int(os.environ.get("BIND_PORT", "8080"))
 
 # A normal browser-ish UA so Cloudflare doesn't block the request as a bot
 # (default Python-urllib UA trips Cloudflare error 1010).
-UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 KausappAdmin/1.0"
+UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 KausAppAdmin/1.0"
 
 
 def fetch_reports():
@@ -108,9 +108,9 @@ def render(reports):
     body = "".join(rows) if rows else '<div class="empty">No bug reports yet. 🎉</div>'
     return f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>Kausapp — Bug Reports</title>
+<meta name="robots" content="noindex,nofollow"><title>KausApp — Bug Reports</title>
 <style>{PAGE_CSS}</style></head><body>
-<header><h1>Kausapp — Bug Reports</h1><span class="count">{len(reports)} report(s)</span></header>
+<header><h1>KausApp — Bug Reports</h1><span class="count">{len(reports)} report(s)</span></header>
 {body}
 </body></html>"""
 
@@ -162,7 +162,7 @@ def main():
     if not ADMIN_SECRET:
         raise SystemExit("ADMIN_SECRET is not set. See admin/kausapp-admin.env.example")
     srv = ThreadingHTTPServer((BIND_HOST, BIND_PORT), Handler)
-    print(f"Kausapp admin listening on http://{BIND_HOST}:{BIND_PORT}")
+    print(f"KausApp admin listening on http://{BIND_HOST}:{BIND_PORT}")
     srv.serve_forever()
 
 

@@ -1,20 +1,20 @@
 <p align="center">
-  <img src="assets/icon.png" width="120" alt="Kausapp icon">
+  <img src="assets/icon.png" width="120" alt="KausApp icon">
 </p>
 
-<h1 align="center">Kausapp</h1>
+<h1 align="center">KausApp</h1>
 
 <p align="center">A lightweight, cross-platform desktop client for <b>Facebook Messenger</b>.<br>
 By <a href="https://coders.ph">Coders Republic (coders.ph)</a></p>
 
 ---
 
-Kausapp brings Messenger back to the desktop on **macOS, Windows, and Linux**. It wraps the official
+KausApp brings Messenger back to the desktop on **macOS, Windows, and Linux**. It wraps the official
 `messenger.com` web app and adds native desktop behavior — system tray, real-time notifications,
 external-link handling, persistent login, and microphone/camera access for voice & video calls.
 
 > **Not affiliated with or endorsed by Meta.** "Facebook" and "Messenger" are trademarks of Meta
-> Platforms, Inc. Kausapp is an independent client that loads the official Messenger web app.
+> Platforms, Inc. KausApp is an independent client that loads the official Messenger web app.
 
 ## Features
 
@@ -33,10 +33,10 @@ platform directly from the [**Releases**](../../releases) page:
 
 | Platform | File |
 | --- | --- |
-| macOS (Apple Silicon) | `Kausapp-<version>-arm64.dmg` |
-| macOS (Intel) | `Kausapp-<version>.dmg` |
-| Windows | `Kausapp Setup <version>.exe` |
-| Linux | `Kausapp-<version>.AppImage` / `.deb` |
+| macOS (Apple Silicon) | `KausApp-<version>-arm64.dmg` |
+| macOS (Intel) | `KausApp-<version>.dmg` |
+| Windows | `KausApp Setup <version>.exe` |
+| Linux | `KausApp-<version>.AppImage` / `.deb` |
 
 > The app is **not code-signed** yet, so on first launch macOS may say "unidentified developer"
 > (right-click → Open) and Windows SmartScreen may warn (More info → Run anyway).

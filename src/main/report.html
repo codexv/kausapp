@@ -76,7 +76,7 @@
       if (screenshot) preview.style.backgroundImage = 'url("' + screenshot + '")';
       else { preview.textContent = ''; incShot.checked = false; }
       document.getElementById('meta').textContent =
-        'Kausapp v' + (data.version || '?') + ' · ' + (data.platform || '');
+        'KausApp v' + (data.version || '?') + ' · ' + (data.platform || '');
     });
 
     incShot.addEventListener('change', function () {

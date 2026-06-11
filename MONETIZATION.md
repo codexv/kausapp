@@ -1,17 +1,17 @@
-# Kausapp — Monetization Strategy
+# KausApp — Monetization Strategy
 
-> Status: **planning / reference**. Captures the monetization direction discussed for Kausapp.
+> Status: **planning / reference**. Captures the monetization direction discussed for KausApp.
 > This is product/business strategy, not legal advice — see the legal note at the bottom.
 
 ## The hard constraint
 
-Kausapp's core function is providing **access to Meta's Facebook Messenger**, a service we do not
+KausApp's core function is providing **access to Meta's Facebook Messenger**, a service we do not
 own. **We cannot legally paywall access to Messenger itself** — Meta's Platform Terms restrict
 unauthorized automated access, wrapping/framing their products, and commercializing access to their
 service. A *free* wrapper (like the open-source Caprine) sits in tolerated territory; a *paid* one
 that charges for Messenger access invites cease-and-desist / takedown and trademark exposure.
 
-**The reframe:** Kausapp's defensible value is **"Messenger + the desktop powers Meta never gave
+**The reframe:** KausApp's defensible value is **"Messenger + the desktop powers Meta never gave
 you."** We monetize the *second half* — value we add, our audience, and Coders Republic's business —
 never Messenger access itself.
 
@@ -52,7 +52,7 @@ never Messenger access itself.
 ### 4. Coders Republic funnel — likely highest $ per hour
 - A polished cross-platform app is a **portfolio centerpiece** → wins custom Electron/desktop
   client work worth far more than license sales.
-- **White-label service:** "we build branded desktop clients" — Kausapp is now a repeatable
+- **White-label service:** "we build branded desktop clients" — KausApp is now a repeatable
   template to sell to other companies.
 
 ---
