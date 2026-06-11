@@ -112,6 +112,18 @@ Messenger/
   pre-admin Caddyfile from backup, appended the redirect block, reloaded. Verified: 302 →
   http://100.99.99.75:8080 → 200. Repo snippet `admin/admin.caddy` updated to match.
 
+### 2026-06-11 — Fix main-process HTTP on Tailscale (report send + remote userstyles) → v0.1.7
+- Symptom: bug report failed with "fetch failed" (with or without screenshot), AND the OLED gradient
+  fix "came back" — both while the user was on Tailscale (for admin.kausapp.com). Root cause: the
+  app's MAIN process used Node's global `fetch` (system network stack), which breaks on the Tailscale
+  network (likely IPv6/routing). Chromium (renderer) is unaffected, so messenger.com/site pages load
+  fine. The broken main-process fetch failed the report POST and the remote userstyle fetch (→ fell
+  back to the stale bundled CSS, so the gradient reappeared).
+- Fix: use Electron's **`net.fetch`** (Chromium network stack) instead of Node `fetch` for both the
+  report POST and `loadStyleCss`. Bundled `userstyle-oled.css` also already carries the latest fixes.
+- Cut **v0.1.7**. Immediate workaround for the user pre-update: temporarily disconnect Tailscale, then
+  report send + remote CSS work.
+
 ### 2026-06-11 — Clean https://admin.kausapp.com (Caddy + DNS-01)
 - User wanted the clean HTTPS URL (no `:8080`). The droplet runs **Caddy** (not nginx) on 80/443,
   already with the **cloudflare DNS module** + `{env.CF_API_TOKEN}` (used by `files.coders.ph`).

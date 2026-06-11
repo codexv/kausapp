@@ -9,7 +9,8 @@ const {
   nativeImage,
   session,
   dialog,
-  ipcMain
+  ipcMain,
+  net
 } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -96,7 +97,7 @@ const REMOTE_STYLE = {
 
 async function loadStyleCss(name, localPath) {
   try {
-    const res = await fetch(`${REMOTE_STYLE[name]}?t=${Date.now()}`, { cache: 'no-store' });
+    const res = await net.fetch(`${REMOTE_STYLE[name]}?t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const css = await res.text();
       if (css && css.trim()) return css;
@@ -500,7 +501,7 @@ function registerReportIpc() {
       platform: process.platform
     };
     try {
-      const res = await fetch(REPORT_ENDPOINT, {
+      const res = await net.fetch(REPORT_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
