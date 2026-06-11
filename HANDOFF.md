@@ -103,6 +103,15 @@ Messenger/
   footers. Updated both `site/index.html` + `site/download/index.html`; removed `coders-logo-white.png`.
   Deployed + verified live.
 
+### 2026-06-11 — admin.kausapp.com: switch to redirect (reverse_proxy wouldn't load on client)
+- The direct reverse_proxy + `remote_ip 100.64.0.0/10` block served fine from the droplet but the
+  user's tailnet device couldn't load `admin.kausapp.com` (IP:8080 worked). DNS confirmed grey-cloud
+  (→100.99.99.75), so not a proxy issue — likely the remote_ip/reverse_proxy path.
+- Per user request, changed the Caddy block to a **redirect**: `admin.kausapp.com` keeps its DNS-01
+  cert and `redir`s to `http://100.99.99.75:8080{uri}` (the working tailnet URL). Restored the
+  pre-admin Caddyfile from backup, appended the redirect block, reloaded. Verified: 302 →
+  http://100.99.99.75:8080 → 200. Repo snippet `admin/admin.caddy` updated to match.
+
 ### 2026-06-11 — Clean https://admin.kausapp.com (Caddy + DNS-01)
 - User wanted the clean HTTPS URL (no `:8080`). The droplet runs **Caddy** (not nginx) on 80/443,
   already with the **cloudflare DNS module** + `{env.CF_API_TOKEN}` (used by `files.coders.ph`).
