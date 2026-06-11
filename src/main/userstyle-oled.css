@@ -57,6 +57,19 @@ html, body, #facebook {
   background: #000 !important;
 }
 
+/* 4c) The chat-theme gradient is applied via a class / CSS variable (not inline
+ *     style), so the rules above miss it. Nuke EVERY background-image inside the
+ *     main conversation region, regardless of how it's set — but preserve real
+ *     media (img/svg/video/canvas/role=img) so avatars & photos survive. */
+[role="main"] {
+  background-color: #000 !important;
+  background-image: none !important;
+}
+[role="main"] *:not(img):not(svg):not(image):not(video):not(canvas):not([role="img"]) {
+  background-image: none !important;
+  background-color: transparent !important;
+}
+
 /* 5) Kill gray divider lines / drop shadows that look off on pure black. */
 :where(div, header, footer, ul, li, section) {
   box-shadow: none !important;
