@@ -1,0 +1,22 @@
+# Caddy site block for the Kausapp admin (appended to /etc/caddy/Caddyfile on the droplet).
+#
+# Serves https://admin.kausapp.com with a REAL Let's Encrypt cert obtained via the
+# Cloudflare DNS-01 challenge (admin.kausapp.com points to a private Tailscale IP, so
+# HTTP/TLS-ALPN challenges can't work — DNS-01 can). Reuses Caddy's existing
+# {env.CF_API_TOKEN} (from /etc/caddy/cloudflare.env), same as files.coders.ph.
+#
+# Access is restricted to the Tailscale CGNAT range (100.64.0.0/10): tailnet
+# devices reach the admin; anyone hitting the droplet's public IP gets 403.
+
+admin.kausapp.com {
+    tls {
+        dns cloudflare {env.CF_API_TOKEN}
+    }
+    @tailnet remote_ip 100.64.0.0/10
+    handle @tailnet {
+        reverse_proxy 100.99.99.75:8080
+    }
+    handle {
+        respond "Forbidden — this admin is Tailscale-only." 403
+    }
+}

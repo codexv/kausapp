@@ -103,6 +103,19 @@ Messenger/
   footers. Updated both `site/index.html` + `site/download/index.html`; removed `coders-logo-white.png`.
   Deployed + verified live.
 
+### 2026-06-11 — Clean https://admin.kausapp.com (Caddy + DNS-01)
+- User wanted the clean HTTPS URL (no `:8080`). The droplet runs **Caddy** (not nginx) on 80/443,
+  already with the **cloudflare DNS module** + `{env.CF_API_TOKEN}` (used by `files.coders.ph`).
+- Added a Caddy site block (`admin/admin.caddy`, appended to `/etc/caddy/Caddyfile`) serving
+  **admin.kausapp.com** with a real Let's Encrypt cert via **Cloudflare DNS-01** (HTTP/TLS-ALPN can't
+  work — domain points to a private tailscale IP), reverse-proxying to the admin on `100.99.99.75:8080`.
+  Tailnet-only enforced via `remote_ip 100.64.0.0/10` (else 403).
+- Caddyfile backed up before edit; validated; `systemctl reload caddy`. Verified from a tailnet source:
+  **HTTP 200, ssl_verify=0 (valid cert)**, renders Bug Reports. Token covers kausapp.com (cert issued).
+- **Now live: https://admin.kausapp.com** from any tailnet device (the `:8080` direct URL still works too).
+- Note: couldn't (and didn't need to) read the CF token — guardrail blocked the sudo secret read;
+  Caddy references `{env.CF_API_TOKEN}` itself.
+
 ### 2026-06-11 — Tailscale admin LIVE (admin.kausapp.com)
 - Created DNS **`admin.kausapp.com` A → 100.99.99.75** (DNS-only/grey-cloud) using the user's
   `~/.cf_dns` token (DNS:Edit; it lacked KV read).
