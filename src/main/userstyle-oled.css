@@ -65,21 +65,9 @@ html, body, #facebook {
   background-color: #000 !important;
   background-image: none !important;
 }
-[role="main"] *:not(img):not(svg):not(image):not(video):not(canvas):not([role="img"]) {
-  background-image: none !important;
-  background-color: transparent !important;
-}
-
-/* 4d) Many Messenger chat themes paint the gradient on a ::before/::after
- *     PSEUDO-element behind the messages — unreachable by styling the element
- *     itself. Clear pseudo-element backgrounds in the conversation + grid areas. */
-[role="main"]::before, [role="main"]::after,
-[role="main"] *::before, [role="main"] *::after,
-[role="grid"]::before, [role="grid"]::after,
-[role="grid"] *::before, [role="grid"] *::after {
-  background-image: none !important;
-  background: none !important;
-}
+/* (Removed the [role="main"] * blanket transparency + pseudo-element clearing:
+ *  they were stripping received-bubble bodies and breaking bubble corners. The
+ *  real theme gradient is a div, handled in 4e below.) */
 
 /* 4e) THE per-chat theme gradient. It's a full-bleed div whose colored
  *     linear-gradient comes from a class + CSS variable (not inline style), and
@@ -93,13 +81,8 @@ html, body, #facebook {
   background: #000 !important;
 }
 
-/* 5) Kill gray divider lines / drop shadows that look off on pure black. */
-:where(div, header, footer, ul, li, section) {
-  box-shadow: none !important;
-}
-:where(div, header, footer) {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
+/* (Removed the blanket border-color override — it painted a faint gray border on
+ *  every div, which is exactly what showed up as "gray at the bubble corners".) */
 
 /* 6) Restore the Messenger-blue accent (sent bubbles, Send button). */
 [style*="rgb(0, 132, 255)"],
