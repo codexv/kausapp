@@ -16,6 +16,14 @@ const path = require('node:path');
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return;
 
+  // When a real signing cert is provided (CI via CSC_LINK), let electron-builder
+  // sign with that consistent identity instead — ad-hoc would override it and
+  // break in-place auto-updates. Only ad-hoc sign local/unsigned builds.
+  if (process.env.CSC_LINK) {
+    console.log('[afterPack] CSC_LINK present — skipping ad-hoc (electron-builder will sign with the cert)');
+    return;
+  }
+
   const appName = context.packager.appInfo.productFilename;
   const appPath = path.join(context.appOutDir, `${appName}.app`);
 

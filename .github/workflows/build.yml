@@ -43,8 +43,12 @@ jobs:
         # --publish never: we attach to the Release explicitly in a later step.
         run: npm run dist -- --publish never
         env:
-          # No code-signing certs configured yet — build unsigned.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          # macOS only: sign every build with the SAME self-signed cert so
+          # in-place auto-updates work (Squirrel.Mac requires a stable identity).
+          # Empty on Windows/Linux (they build unsigned). The cert is self-signed,
+          # so Gatekeeper still shows "unidentified developer" on first install.
+          CSC_LINK: ${{ matrix.name == 'macOS' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.name == 'macOS' && secrets.CSC_KEY_PASSWORD || '' }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

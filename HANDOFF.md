@@ -68,6 +68,26 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-11 — Consistent self-signed code-signing for in-place macOS updates → v0.1.9
+- Root cause of "update isn't applying in place": macOS builds were **pure ad-hoc signed**
+  (`codesign -s -`) = a NEW identity every build, so Squirrel.Mac won't swap in place. (RAVEIRC gets
+  free in-place updates because it's **Tauri** — its updater verifies with its own minisign key,
+  independent of OS code-signing; per `RAVEv4/docs/SIGNING.md`. Electron's macOS updater can't do that.)
+- Fix: generated a **consistent self-signed code-signing cert** ("KausApp Self-Signed", code-signing
+  EKU). Stored p12+password backup in `backups/signing/` (gitignored). Added GitHub secrets
+  **CSC_LINK** (base64 p12) + **CSC_KEY_PASSWORD**.
+- `package.json` build.mac: `identity: "KausApp Self-Signed"`, `hardenedRuntime: false`.
+- `build/afterPack.js`: skip ad-hoc when `CSC_LINK` is set (CI signs with the cert; local stays ad-hoc).
+- CI `build.yml`: pass CSC_LINK/CSC_KEY_PASSWORD to the **macOS job only**; removed
+  `CSC_IDENTITY_AUTO_DISCOVERY=false`. Win/Linux still unsigned.
+- ⚠️ The cert MUST stay constant forever (changing it breaks in-place updates) — keep
+  `backups/signing/kausapp-codesign.p12` + password safe. Still self-signed → "unidentified developer"
+  on first install (right-click Open).
+- Plan: user downloads **v0.1.9** once (rename + consistent cert baseline); v0.1.9 → future updates
+  apply in place on macOS. (Verify electron-builder actually signs with the cert in CI logs.)
+- Pending: website deploy still blocked locally by Tailscale (wrangler "fetch failed"); download page
+  still shows old branding until deployed from a non-Tailscale moment.
+
 ### 2026-06-11 — Rebrand display name Kausapp → KausApp (capital A) → v0.1.8
 - Changed the **display name** everywhere to **KausApp** (app UI, dialogs, About, report window,
   website pages, ABOUT/README/WEBDEV/MONETIZATION docs, admin page title, Caddy/systemd descriptions,

@@ -1,7 +1,7 @@
 {
   "name": "kausapp",
   "productName": "KausApp",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "KausApp — a cross-platform desktop client for Facebook Messenger, by Coders Republic (coders.ph)",
   "license": "MIT",
   "author": "Coders Republic (coders.ph)",
@@ -50,7 +50,9 @@
         { "target": "dmg", "arch": ["x64", "arm64"] },
         { "target": "zip", "arch": ["x64", "arm64"] }
       ],
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "identity": "KausApp Self-Signed",
+      "hardenedRuntime": false
     },
     "win": {
       "target": [
