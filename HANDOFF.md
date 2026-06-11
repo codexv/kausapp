@@ -68,6 +68,20 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-11 — admin.kausapp.com: root cause = tailscale-serve owns :443 → switched to HTTP
+- "Can't open admin.kausapp.com" (TLS `internal_error` over the tunnel) root cause found:
+  **`tailscale serve` owns TCP :443 on the tailnet IP** (config: `TCP 443/8443 HTTPS:true` for
+  `hackpixels-droplet.tail5822ec.ts.net`). It intercepts all 443 to 100.99.99.75 and terminates TLS
+  with the .ts.net cert — so a custom-domain HTTPS vhost (admin.kausapp.com) can't terminate at Caddy
+  there → clients get `internal_error`. (Droplet→itself bypassed it; `:8080`/`:80` aren't intercepted.)
+  Not MTU — tested MSS clamping (added then removed iptables OUTPUT+PREROUTING TCPMSS rules; no effect).
+- **Solution:** serve the admin over **HTTP on :80** via Caddy (`http://admin.kausapp.com { reverse_proxy
+  100.99.99.75:8080 }`). Port 80 isn't intercepted; tailnet is WireGuard-encrypted so HTTP is safe.
+  ✅ **http://admin.kausapp.com now works (clean, no port).** Replaced the old redirect/tls block;
+  repo snippet `admin/admin.caddy` updated. Clean HTTPS on :443 not feasible without disturbing the
+  existing tailscale-serve setup (server.hackpixels.com/files.coders.ph).
+- (User authorized the droplet firewall/Caddy changes directly.)
+
 ### 2026-06-11 — Rebrand fully live + Tailscale deploy unblock
 - **Website rebrand deployed** to kausapp.com (KausApp on homepage + /download), after unblocking
   the Tailscale network issue.

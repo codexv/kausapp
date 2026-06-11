@@ -1,17 +1,15 @@
-# Caddy site block for the KausApp admin (appended to /etc/caddy/Caddyfile on the droplet).
+# Caddy site block for the KausApp admin (in /etc/caddy/Caddyfile on the droplet).
 #
-# admin.kausapp.com gets a REAL Let's Encrypt cert via the Cloudflare DNS-01 challenge
-# (the domain points to a private Tailscale IP, so HTTP/TLS-ALPN challenges can't work).
-# It then REDIRECTS to the tailnet-only admin service on the droplet's Tailscale IP.
+# Served over HTTP (port 80), NOT HTTPS. Why: `tailscale serve` already owns
+# :443 on this node's tailnet IP (for hackpixels-droplet.tail5822ec.ts.net), so
+# it intercepts every TLS connection to 100.99.99.75:443 and terminates it with
+# the .ts.net cert — a custom-domain HTTPS vhost (admin.kausapp.com) can't
+# terminate at Caddy there (clients get a TLS internal_error). Port 80 isn't
+# intercepted, and the tailnet is WireGuard-encrypted, so plain HTTP is fine.
 #
-# Direct reverse_proxy + a remote_ip filter was tried first but wouldn't load on the
-# user's device; a plain redirect to the working IP:port is reliable. The redirect
-# target (100.99.99.75:8080) is a private tailnet address, so it's only reachable from
-# the tailnet anyway.
+# admin.kausapp.com -> A 100.99.99.75 (DNS-only) -> Caddy :80 -> reverse_proxy to
+# the admin service on :8080. Reachable only from the tailnet.
 
-admin.kausapp.com {
-    tls {
-        dns cloudflare {env.CF_API_TOKEN}
-    }
-    redir http://100.99.99.75:8080{uri}
+http://admin.kausapp.com {
+    reverse_proxy 100.99.99.75:8080
 }
