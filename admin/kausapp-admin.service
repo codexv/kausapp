@@ -6,9 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=acronix
-WorkingDirectory=/home/acronix/KausApp/admin
-EnvironmentFile=/home/acronix/KausApp/admin/kausapp-admin.env
-ExecStart=/usr/bin/python3 /home/acronix/KausApp/admin/server.py
+WorkingDirectory=/home/acronix/Kausapp/admin
+EnvironmentFile=/home/acronix/Kausapp/admin/kausapp-admin.env
+ExecStart=/usr/bin/python3 /home/acronix/Kausapp/admin/server.py
 Restart=on-failure
 RestartSec=5
 

@@ -68,6 +68,21 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-11 — Rebrand fully live + Tailscale deploy unblock
+- **Website rebrand deployed** to kausapp.com (KausApp on homepage + /download), after unblocking
+  the Tailscale network issue.
+- **Tailscale root cause (diagnosed):** the tailnet advertises broad routes incl. a `default →
+  utun10`; with `accept-routes` on, traffic to part of Cloudflare's range (api.cloudflare.com,
+  104.19.x) was hijacked into the tailnet and timed out — breaking wrangler + the app's Node fetch,
+  while the site edge IPs (104.21.x) still worked. Set **`tailscale set --accept-routes=false`** (kept
+  100.x tailnet/admin access). That fixed IPv4; Node still tried blackholed IPv6, so deploys use
+  **`NODE_OPTIONS=--dns-result-order=ipv4first`**. Site deployed successfully that way.
+  - To restore: `tailscale set --accept-routes=true` (re-blocks local CF deploys → use CI deploy then).
+- **Admin redeploy gotcha:** the bulk `Kausapp→KausApp` sed also rewrote the **filesystem paths** in
+  `admin/kausapp-admin.service` (`/home/acronix/Kausapp/...` → `/KausApp/...`), breaking the unit
+  (env file not found). Reverted the path lines to `Kausapp` (real droplet dir); Description stays
+  "KausApp". Admin service active again, titled "KausApp — Bug Reports".
+
 ### 2026-06-11 — Consistent self-signed code-signing for in-place macOS updates → v0.1.9
 - Root cause of "update isn't applying in place": macOS builds were **pure ad-hoc signed**
   (`codesign -s -`) = a NEW identity every build, so Squirrel.Mac won't swap in place. (RAVEIRC gets
