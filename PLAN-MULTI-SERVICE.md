@@ -51,6 +51,32 @@ Skip permanently: **iMessage** (no web client; off-limits), **Signal** (web clie
    Option to "sleep" inactive services (unload to save RAM) — trade-off vs real-time delivery;
    make it per-service configurable.
 
+## 4b. Unified Inbox (the centerpiece — chosen direction)
+One merged, consistently-formatted inbox of **incoming messages across all services**; click a
+message → **read-render the thread** in KausApp's own UI; **reply in-app** (the reply is sent
+*through* the real service); plus a **"View in [service]"** button to jump to the original web app.
+
+**Everything rides one abstraction — the per-service Adapter** (a content script injected via each
+view's preload). The same adapter powers notifications (M2), the unified inbox, thread render, and
+send:
+- `observeIncoming(cb)` — MutationObserver on the chat list / notifications → emits
+  `{ service, threadId, name, avatar, snippet, ts, unread }` as messages arrive (drives the inbox + badges).
+- `getConversations()` — snapshot of recent threads.
+- `getThread(threadId)` — open + scrape the message list → normalized messages (text + basic media refs).
+- `sendMessage(threadId, text)` — focus the composer, inject text, trigger send. **Text-only,
+  per-service, OPT-IN, behind an explicit account-risk warning** (this automates the official web
+  client — strict services like WhatsApp/Meta can flag/ban accounts; selectors break often).
+- `openInApp(threadId)` — bring the service view forward + open the thread (always available; the
+  reliable fallback for media, calls, reactions, attachments, and any service where send is risky/off).
+
+**Honest scope of "fetch all incoming":** live latest-message-per-thread (from each service's
+sidebar/notifications) + the full thread on open. Not a backfill of every message body across all
+threads (web apps don't expose that at once). Services must be loaded/logged-in to observe + send.
+
+**Rendering reality:** text threads render cleanly; rich content (voice notes, reactions,
+reply-quotes, stickers, link previews, edits/deletes) is a parity treadmill → render what's cheap,
+defer the rest to "View in app." Each adapter is hand-built and needs maintenance as DOMs change.
+
 ## 5. Enhanced features (the differentiators) — layered, phased
 - **Global quick-switcher** (Cmd/Ctrl+K) across services (+ recent services).
 - **Unified notification center / "next unread"** navigation across services.
@@ -84,21 +110,28 @@ These map directly onto the earlier **MONETIZATION.md** thesis: charge for value
 
 ## 8. Milestones
 - **M0 — Plan** (this doc).
-- **M1 — Shell + multi-view:** rail, switching, isolated sessions, 3 services (Messenger,
-  WhatsApp, Telegram). Reuse glue.
-- **M2 — Notifications & badges:** unified notifications, aggregate + per-service badges,
-  mute/DND, add/reorder/custom services. → ship **v0.2.0**.
-- **M3 — Enhanced layer:** quick-switcher, DND schedules, workspaces, per-service themes.
-- **M4 — AI (opt-in):** summarize/draft via Claude API + settings/consent.
-- **M5 — Polish:** multi-account, settings UI, performance (sleep inactive), release.
+- **M1 — Shell + multi-view:** rail, switching, isolated sessions for the v1 services
+  (Messenger, WhatsApp, Telegram, Instagram, Discord). Reuse glue.
+- **M2 — Adapter framework + notifications:** the per-service Adapter (§4b), unified
+  notifications, aggregate + per-service unread badges, mute/DND, add/reorder/custom services.
+- **M3 — Unified Inbox (read):** merged incoming feed (`observeIncoming` + `getConversations`),
+  consistent thread **read-render** (`getThread`), **"View in app"** (`openInApp`). → ship **v0.2.0**.
+- **M3b — In-app reply (send):** `sendMessage` per service, **opt-in + account-risk warning**,
+  text-only; rich content defers to "View in app". Roll out service-by-service as each proves stable.
+- **M4 — AI (opt-in):** summarize threads + **draft replies** (Claude API) — pairs with M3b (draft
+  in-app, send via adapter or open-in-app) + settings/consent.
+- **M5 — Enhanced + polish:** quick-switcher, DND schedules, workspaces, per-service themes,
+  multi-account, settings UI, performance (sleep inactive vs keep-warm for the inbox), release.
 
 ## 9. Decisions — RESOLVED
 - ✅ **v1 service list:** Messenger + WhatsApp Web + Telegram Web + Instagram DMs + Discord.
-- ✅ **AI:** deferred to **M4** (build the multi-service core + notifications + enhanced UX first).
-- ✅ **View tech:** `WebContentsView`.
-- ✅ **Branding:** keep **KausApp** as the multi-messenger name.
-- ⏳ **Free vs Pro split:** still open — revisit alongside MONETIZATION.md when the enhanced
-  layer (M3+) takes shape.
+- ✅ **Centerpiece:** a **Unified Inbox** (§4b) — aggregate incoming, read-render threads in our
+  UI, reply in-app, "View in app" fallback — all built on the per-service **Adapter**.
+- ✅ **Sending:** the only path is automating each service's web composer → **per-service, opt-in,
+  account-risk-warned (M3b)**; "View in app" is the universal, safe fallback.
+- ✅ **AI:** deferred to **M4** (draft replies pair with M3b).
+- ✅ **View tech:** `WebContentsView`. **Branding:** keep **KausApp**.
+- ⏳ **Free vs Pro split:** open — revisit with MONETIZATION.md when the enhanced layer takes shape.
 
-Planning phase complete. Next action when ready: **M1** — shell + service rail + multi-view
-with isolated sessions for the v1 services. (Not started — awaiting go-ahead.)
+Planning phase complete. Next action when ready: **M1** — shell + service rail + multi-view with
+isolated sessions for the v1 services. (Not started — awaiting go-ahead.)
