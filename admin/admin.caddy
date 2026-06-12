@@ -11,5 +11,5 @@
 # the admin service on :8080. Reachable only from the tailnet.
 
 http://admin.kausapp.com {
-    reverse_proxy 100.99.99.75:8080
+    reverse_proxy 127.0.0.1:8800
 }

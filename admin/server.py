@@ -28,8 +28,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 REPORTS_API = os.environ.get("REPORTS_API", "https://kausapp.com/api/reports")
-BIND_HOST = os.environ.get("BIND_HOST", "100.99.99.75")
-BIND_PORT = int(os.environ.get("BIND_PORT", "8080"))
+BIND_HOST = os.environ.get("BIND_HOST", "127.0.0.1")
+BIND_PORT = int(os.environ.get("BIND_PORT", "8800"))
 
 # A normal browser-ish UA so Cloudflare doesn't block the request as a bot
 # (default Python-urllib UA trips Cloudflare error 1010).
