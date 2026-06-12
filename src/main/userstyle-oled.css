@@ -1,79 +1,57 @@
 /*
- * KausApp — Pure Black (OLED) theme  (hosted; app fetches this at runtime).
+ * KausApp — Pure Black (OLED) theme  (hosted; the app fetches this at runtime).
  *
- * Forces EVERY Messenger surface to true black (#000). Best with Messenger's
- * own Dark mode on. Toggle: View → "Pure black (OLED) theme".
+ * PRINCIPLE: paint the BACKGROUND, surfaces, and popovers SOLID black via
+ * Facebook's own design tokens + a few container roles. We do NOT use blanket
+ * element transparency (that made popovers see-through and stripped bubbles),
+ * and we NEVER touch message bubbles — they keep Messenger's real colors
+ * (received = gray, sent = blue). Best with Messenger's own Dark mode on.
+ * Toggle: View → "Pure black (OLED) theme".
  */
 
-/* 1) Black document root. */
-html, body, #facebook {
-  background: #000 !important;
-}
+/* 1) Document root → pure black. */
+html, body, #facebook { background: #000 !important; }
 
-/* 2) Override Facebook design-token CSS variables to black. */
-:root {
+/* 2) Override Facebook SURFACE / wash / popover tokens to black. These are the
+ *    backgrounds behind everything — NOT the message-bubble color tokens, which
+ *    we intentionally leave alone so bubbles keep their native colors. */
+:root, .__fb-dark-mode {
   --web-wash: #000 !important;
   --wash: #000 !important;
+  --secondary-wash: #000 !important;
+  --tertiary-wash: #000 !important;
   --surface-background: #000 !important;
   --card-background: #000 !important;
+  --elevated-card-background: #000 !important;
   --messenger-card-background: #000 !important;
-  --message-list-background: #000 !important;
-  --comment-background: #000 !important;
-  --material-background: #000 !important;
+  --message-list-background: #000 !important;   /* conversation backdrop, not the bubble */
+  --left-nav-background: #000 !important;
   --base-overlay-background: #000 !important;
   --dialog-view-background: #000 !important;
   --popover-background: #000 !important;
   --menu-background: #000 !important;
+  --tooltip-background: #000 !important;
+  --comment-background: #0d0d0d !important;
   --highlight-bg: #0d0d0d !important;
-  --left-nav-background: #000 !important;
-  --secondary-wash: #000 !important;
+  --hover-overlay: rgba(255, 255, 255, 0.06) !important;
 }
 
-/* 3) Transparent containers over the black root (does NOT touch background-image,
- *    so avatars/photos survive). Catches surfaces our token list misses. */
-:where(div, section, main, aside, header, nav, footer, ul, ol, li, table, thead,
-       tbody, tr, td, th, form, label, article, dialog) {
-  background-color: transparent !important;
-}
-
-/* 4) Force the major regions (conversation/message area, chat list, info pane,
- *    headers) SOLID black, and clear any region background-image (patterns or
- *    gradients) that was making the chat background look weird. */
-:where([role="main"], [role="grid"], [role="complementary"], [role="navigation"],
-       [role="banner"], [role="region"]) {
+/* 3) Solid black on the major regions AND overlays/popovers/menus so nothing is
+ *    see-through (fixes the transparent search dropdown jumbling with the inbox).
+ *    These are CONTAINERS, never bubbles. */
+:where([role="main"], [role="navigation"], [role="grid"], [role="complementary"],
+       [role="banner"], [role="region"], [role="dialog"], [role="menu"],
+       [role="listbox"], [role="combobox"], [role="tooltip"]) {
   background-color: #000 !important;
   background-image: none !important;
 }
 
-/* 4b) Remove the per-conversation gradient/wallpaper "chat theme" (the colored
- *     background in the message area). We clear gradient backgrounds only —
- *     avatar/photo backgrounds are url(...) images and are left untouched. */
+/* 4) Kill the per-chat gradient/wallpaper "chat theme" (a full-bleed div behind
+ *    the messages — not a bubble). */
 [style*="gradient" i] {
   background-image: none !important;
   background-color: #000 !important;
 }
-[style*="linear-gradient" i],
-[style*="radial-gradient" i] {
-  background: #000 !important;
-}
-
-/* 4c) The chat-theme gradient is applied via a class / CSS variable (not inline
- *     style), so the rules above miss it. Nuke EVERY background-image inside the
- *     main conversation region, regardless of how it's set — but preserve real
- *     media (img/svg/video/canvas/role=img) so avatars & photos survive. */
-[role="main"] {
-  background-color: #000 !important;
-  background-image: none !important;
-}
-/* (Removed the [role="main"] * blanket transparency + pseudo-element clearing:
- *  they were stripping received-bubble bodies and breaking bubble corners. The
- *  real theme gradient is a div, handled in 4e below.) */
-
-/* 4e) THE per-chat theme gradient. It's a full-bleed div whose colored
- *     linear-gradient comes from a class + CSS variable (not inline style), and
- *     it lives OUTSIDE [role="main"], so every earlier rule missed it. Target the
- *     element by its Facebook utility-class signature and force it black.
- *     (If Meta reshuffles these class hashes later, re-grab them via DevTools.) */
 .x9f619.x1ja2u2z.x1xsqp64.x18d0r48,
 .x9f619.x1ja2u2z.x18d0r48,
 .x9f619.x1xsqp64 {
@@ -81,19 +59,10 @@ html, body, #facebook {
   background: #000 !important;
 }
 
-/* (Removed the blanket border-color override — it painted a faint gray border on
- *  every div, which is exactly what showed up as "gray at the bubble corners".) */
-
-/* 6) Restore the Messenger-blue accent (sent bubbles, Send button). */
-[style*="rgb(0, 132, 255)"],
-[style*="rgb(0, 100, 224)"],
-[style*="rgb(20, 86, 255)"],
-[style*="#0084ff" i],
-[aria-label="Send" i] {
-  background-color: #0084ff !important;
-}
-
-/* 7) Keep composer / input fields faintly visible against pure black. */
+/* 5) Composer / input fields kept faintly visible against pure black. */
 :where(input, textarea, [contenteditable="true"], [role="textbox"]) {
   background-color: #0d0d0d !important;
 }
+
+/* NOTE: intentionally NO blanket container transparency and NO bubble-color
+ * overrides — message bubbles render in Messenger's native colors. */
