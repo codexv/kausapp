@@ -34,12 +34,11 @@ single-instance, the userstyle-injection system (now per-service), permission ha
 external-link handling, bug-report/admin, build/release pipeline.
 
 ## 3. Candidate services (official web clients only)
-Tier 1 (have/easy, strong demand): **Messenger** (done), **WhatsApp Web**, **Telegram Web**,
-**Instagram DMs**, **Discord**, **Slack**.
-Tier 2: **Google Messages** (SMS/RCS), **X/Twitter DMs**, **LinkedIn**, **Google Chat**,
-**Microsoft Teams**, **Mastodon**.
-Skip: **iMessage** (no web client; off-limits), **Signal** (web client retired).
-→ *Decision needed: the v1 service list.*
+**v1 ship list (DECIDED):** Messenger (done) · **WhatsApp Web** · **Telegram Web** ·
+**Instagram DMs** · **Discord**.
+Later/Tier 2 (post-v1): Slack, Google Messages (SMS/RCS), X/Twitter DMs, LinkedIn, Google
+Chat, Microsoft Teams, Mastodon — plus user-added custom services.
+Skip permanently: **iMessage** (no web client; off-limits), **Signal** (web client retired).
 
 ## 4. Core features (parity + the hard part)
 1. **Session isolation** per service/account (partitions). ✔ straightforward.
@@ -93,9 +92,13 @@ These map directly onto the earlier **MONETIZATION.md** thesis: charge for value
 - **M4 — AI (opt-in):** summarize/draft via Claude API + settings/consent.
 - **M5 — Polish:** multi-account, settings UI, performance (sleep inactive), release.
 
-## 9. Decisions needed before M1
-- **v1 service list** (which Tier-1/Tier-2 to ship first).
-- **AI in scope** for this phase, or defer to M4/later?
-- **WebContentsView** confirmed as the view tech (recommended).
-- **Branding:** keep "KausApp" as the multi-messenger name? (it works).
-- **Free vs Pro split** for the enhanced features (ties to MONETIZATION.md).
+## 9. Decisions — RESOLVED
+- ✅ **v1 service list:** Messenger + WhatsApp Web + Telegram Web + Instagram DMs + Discord.
+- ✅ **AI:** deferred to **M4** (build the multi-service core + notifications + enhanced UX first).
+- ✅ **View tech:** `WebContentsView`.
+- ✅ **Branding:** keep **KausApp** as the multi-messenger name.
+- ⏳ **Free vs Pro split:** still open — revisit alongside MONETIZATION.md when the enhanced
+  layer (M3+) takes shape.
+
+Planning phase complete. Next action when ready: **M1** — shell + service rail + multi-view
+with isolated sessions for the v1 services. (Not started — awaiting go-ahead.)
