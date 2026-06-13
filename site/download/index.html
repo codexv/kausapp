@@ -69,8 +69,7 @@
     footer { margin-top: 40px; font-size: 13px; opacity: 0.7; }
     footer a { color: #fff; text-decoration: none; font-weight: 600; }
     footer .by { opacity: 0.85; }
-    .cr-logo { display: inline-block; height: 48px; width: auto; margin-top: 10px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.4); transition: transform 0.12s ease, box-shadow 0.12s ease; }
-    .cr-logo:hover { transform: translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,0.55); }
+    .cr-logo { display: inline-block; height: 44px; width: auto; margin-top: 10px; }
     .back-home {
       position: absolute; top: 22px; left: 24px;
       font-size: 14px; color: #cfe0ff; text-decoration: none; font-weight: 500;
@@ -127,7 +126,10 @@
     </p>
 
     <footer>
-      By <a href="https://coders.ph" target="_blank" rel="noopener">Coders Republic (coders.ph)</a>
+      By
+      <a href="https://coders.ph" target="_blank" rel="noopener" aria-label="Coders Republic">
+        <img class="cr-logo" src="/coders-logo.png" alt="Coders Republic" />
+      </a>
     </footer>
   </main>
 
