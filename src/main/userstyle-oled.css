@@ -1,27 +1,43 @@
 /*
  * KausApp — Pure Black (OLED) theme  (hosted; the app fetches this at runtime).
  *
- * STARTING OVER — minimal & bubble-safe.
- * We ONLY push the backmost background layers to true black. We do NOT touch
- * surface/card tokens, gradients, wallpaper divs, inputs, or any obfuscated
- * utility class — those are the rules that kept turning blue bubbles black.
- * Messenger's native dark mode keeps doing everything else (bubbles, panels,
- * popovers), so colors stay correct.
+ * BACKGROUNDS ONLY — bubble-safe.
+ * We only override Messenger's BACKGROUND design tokens. We never touch bubbles,
+ * text, icons, gradients, wallpaper divs, or any obfuscated utility class — those
+ * were the rules that turned blue bubbles black. Two tiers:
+ *   - backmost frame / empty areas        -> #000 (true black, OLED win)
+ *   - chat list + chat window surfaces     -> #0e0e10 (near-black, but a visible
+ *                                             lift so panels read as distinct)
+ *   - overlays (menus/dialogs/popovers)    -> #1a1a1d (pop above the surfaces)
  *
  * The app only injects this when Messenger is in dark mode. Toggle: View → OLED.
  */
 
-/* Backmost background → true black. */
+/* Backmost frame → true black. */
 html, body, #facebook { background: #000 !important; }
 
-/* The documented "wash" background tokens are the page backdrop, never bubbles.
- * Pushing just these to black blackens the empty areas without reaching any
- * message surface. */
 :root, .__fb-dark-mode {
+  /* Backmost empty areas / washes → pure black. */
   --web-wash: #000 !important;
   --wash: #000 !important;
   --secondary-wash: #000 !important;
   --tertiary-wash: #000 !important;
-  --left-nav-background: #000 !important;
-  --message-list-background: #000 !important;
+  --base-overlay-background: #000 !important;
+
+  /* Chat list + chat window backgrounds → near-black with a touch of contrast
+   * (darker than Messenger's native gray, still visible against the #000 frame).
+   * These are background tokens only — bubbles get their color elsewhere. */
+  --surface-background: #0e0e10 !important;
+  --card-background: #0e0e10 !important;
+  --elevated-card-background: #0e0e10 !important;
+  --messenger-card-background: #0e0e10 !important;
+  --comment-background: #0e0e10 !important;
+  --left-nav-background: #0e0e10 !important;
+  --message-list-background: #0e0e10 !important;
+
+  /* Overlays sit one step above the surfaces so menus/dialogs separate. */
+  --popover-background: #1a1a1d !important;
+  --menu-background: #1a1a1d !important;
+  --dialog-view-background: #1a1a1d !important;
+  --tooltip-background: #1a1a1d !important;
 }
