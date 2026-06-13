@@ -23,21 +23,23 @@ html, body, #facebook { background: #000 !important; }
   --left-nav-background: #000 !important;
   --message-list-background: #000 !important;
 
-  /* elevated surfaces → subtle contrast so they read as panels */
-  --surface-background: #17171a !important;
-  --card-background: #17171a !important;
-  --elevated-card-background: #1c1c20 !important;
-  --messenger-card-background: #17171a !important;
-  --comment-background: #1a1a1e !important;
-  --highlight-bg: #1f1f23 !important;
-  --secondary-button-background: #1f1f23 !important;
-  --primary-deemphasized-button-background: #1f1f23 !important;
+  /* surfaces → pure black (these tokens drive the conversation area, so any
+   * lift here grays out the whole chat — keep them #000). */
+  --surface-background: #000 !important;
+  --card-background: #000 !important;
+  --elevated-card-background: #000 !important;
+  --messenger-card-background: #000 !important;
+  --comment-background: #000 !important;
+  --highlight-bg: #0d0d0d !important;
+  --secondary-button-background: #0d0d0d !important;
+  --primary-deemphasized-button-background: #0d0d0d !important;
 
-  /* overlays → a touch higher so they sit above surfaces */
-  --popover-background: #202024 !important;
-  --menu-background: #202024 !important;
-  --dialog-view-background: #202024 !important;
-  --tooltip-background: #202024 !important;
+  /* ONLY overlays get a slight lift (so popovers are visible + opaque, not the
+   * backmost background). */
+  --popover-background: #1a1a1d !important;
+  --menu-background: #1a1a1d !important;
+  --dialog-view-background: #1a1a1d !important;
+  --tooltip-background: #1a1a1d !important;
 
   --hover-overlay: rgba(255, 255, 255, 0.07) !important;
   --divider: rgba(255, 255, 255, 0.08) !important;
@@ -53,7 +55,7 @@ html, body, #facebook { background: #000 !important; }
 /* Overlays/popovers/menus → elevated + OPAQUE (no see-through jumble). */
 :where([role="dialog"], [role="menu"], [role="listbox"], [role="combobox"],
        [role="tooltip"]) {
-  background-color: #202024 !important;
+  background-color: #1a1a1d !important;
   background-image: none !important;
 }
 
@@ -68,13 +70,13 @@ html, body, #facebook { background: #000 !important; }
 /* Composer / input fields → elevated surface tone so the text box reads as a
  * deliberate panel (fixes the stray "dark rectangle" against pure black). */
 :where(input, textarea, [contenteditable="true"], [role="textbox"]) {
-  background-color: #17171a !important;
+  background-color: #0d0d0d !important;
 }
 
 /* The composer input "pill" gets tinted with the chat's THEME color
  * (e.g. rgb(73,73,108) purple), which on OLED reads as a stray rectangle.
  * Neutralize it to the same elevated tone as the field inside it. */
 .x16sw7j7.x12ol6y4.x180vkcf.x1khw62d.x709u02 {
-  background-color: #17171a !important;
+  background-color: #0d0d0d !important;
   background-image: none !important;
 }
