@@ -46,15 +46,12 @@ html, body, #facebook { background: #000 !important; }
   background-image: none !important;
 }
 
-/* 4) Kill the per-chat gradient/wallpaper "chat theme" (a full-bleed div behind
- *    the messages — not a bubble). */
-[style*="gradient" i] {
-  background-image: none !important;
-  background-color: #000 !important;
-}
+/* 4) Kill ONLY the per-chat gradient/wallpaper "chat theme" — a full-bleed div
+ *    behind the messages, identified by its specific utility-class signature.
+ *    We must NOT use a broad [style*=gradient] rule: Messenger's BUBBLES are also
+ *    gradients, so a broad rule turns blue/themed "own" bubbles black. */
 .x9f619.x1ja2u2z.x1xsqp64.x18d0r48,
-.x9f619.x1ja2u2z.x18d0r48,
-.x9f619.x1xsqp64 {
+.x9f619.x1ja2u2z.x18d0r48 {
   background-image: none !important;
   background: #000 !important;
 }
