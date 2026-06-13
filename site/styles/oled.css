@@ -49,3 +49,12 @@ html, body, #facebook { background: #000 !important; }
   background-color: #222226 !important;
   background-image: none !important;
 }
+
+/* The message composer's rounded "pill" wraps the one-line text element. Paint
+ * the pill the SAME lifted tone so the whole field is one uniform box — without
+ * this, only the text-height inner element lifts and you get a small lighter
+ * rectangle inside the window-colored pill. Also kills the chat's theme tint. */
+.x16sw7j7.x12ol6y4.x180vkcf.x1khw62d.x709u02 {
+  background-color: #222226 !important;
+  background-image: none !important;
+}
