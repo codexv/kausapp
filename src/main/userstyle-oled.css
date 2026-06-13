@@ -6,9 +6,9 @@
  * text, icons, gradients, wallpaper divs, or any obfuscated utility class — those
  * were the rules that turned blue bubbles black. Two tiers:
  *   - backmost frame / empty areas        -> #000 (true black, OLED win)
- *   - chat list + chat window surfaces     -> #1a1a1d (near-black, but a visible
+ *   - chat list + chat window surfaces     -> #141417 (near-black, but a visible
  *                                             lift so panels read as distinct)
- *   - overlays (menus/dialogs/popovers)    -> #26262a (pop above the surfaces)
+ *   - overlays (menus/dialogs/popovers)    -> #222226 (pop above the surfaces)
  *
  * The app only injects this when Messenger is in dark mode. Toggle: View → OLED.
  */
@@ -27,17 +27,17 @@ html, body, #facebook { background: #000 !important; }
   /* Chat list + chat window backgrounds → near-black with a touch of contrast
    * (darker than Messenger's native gray, still visible against the #000 frame).
    * These are background tokens only — bubbles get their color elsewhere. */
-  --surface-background: #1a1a1d !important;
-  --card-background: #1a1a1d !important;
-  --elevated-card-background: #1a1a1d !important;
-  --messenger-card-background: #1a1a1d !important;
-  --comment-background: #1a1a1d !important;
-  --left-nav-background: #1a1a1d !important;
-  --message-list-background: #1a1a1d !important;
+  --surface-background: #141417 !important;
+  --card-background: #141417 !important;
+  --elevated-card-background: #141417 !important;
+  --messenger-card-background: #141417 !important;
+  --comment-background: #141417 !important;
+  --left-nav-background: #141417 !important;
+  --message-list-background: #141417 !important;
 
   /* Overlays sit one step above the surfaces so menus/dialogs separate. */
-  --popover-background: #26262a !important;
-  --menu-background: #26262a !important;
-  --dialog-view-background: #26262a !important;
-  --tooltip-background: #26262a !important;
+  --popover-background: #222226 !important;
+  --menu-background: #222226 !important;
+  --dialog-view-background: #222226 !important;
+  --tooltip-background: #222226 !important;
 }
