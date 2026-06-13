@@ -41,3 +41,11 @@ html, body, #facebook { background: #000 !important; }
   --dialog-view-background: #222226 !important;
   --tooltip-background: #222226 !important;
 }
+
+/* Composer + text inputs (message box, search) → a neutral lifted tone so the
+ * field reads as a deliberate input against the darker window, and never picks
+ * up the chat's theme color. Background only — text/caret untouched. */
+:where(input, textarea, [contenteditable="true"], [role="textbox"]) {
+  background-color: #222226 !important;
+  background-image: none !important;
+}
