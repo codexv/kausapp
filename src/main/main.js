@@ -195,9 +195,27 @@ function saveWindowState() {
 // External-link handling: anything that isn't messenger/facebook opens in the
 // user's default browser instead of inside the app.
 // ---------------------------------------------------------------------------
+// Facebook/Messenger route outbound links through redirector shims
+// (l.facebook.com / lm.facebook.com / l.messenger.com /l.php?u=<encoded>).
+// Unwrap to the real destination so it can go to the system browser.
+function unwrapFbLink(url) {
+  try {
+    const u = new URL(url);
+    if (['l.facebook.com', 'lm.facebook.com', 'l.messenger.com', 'lm.messenger.com'].includes(u.hostname)) {
+      const real = u.searchParams.get('u');
+      if (real) return real;
+    }
+  } catch { /* ignore */ }
+  return url;
+}
+
 function isInternalUrl(url) {
   try {
     const { hostname } = new URL(url);
+    // Link-redirector shims are outbound → treat as external (open in browser).
+    if (['l.facebook.com', 'lm.facebook.com', 'l.messenger.com', 'lm.messenger.com'].includes(hostname)) {
+      return false;
+    }
     return (
       hostname === 'www.messenger.com' ||
       hostname === 'messenger.com' ||
@@ -245,20 +263,24 @@ function createWindow() {
 
   mainWindow.loadURL(MESSENGER_URL, { userAgent: DESKTOP_USER_AGENT });
 
-  // Open target=_blank / window.open links externally.
+  // New windows (target=_blank / window.open): unwrap FB link-shims, then open
+  // external destinations in the SYSTEM browser (deny the in-app window). Only
+  // genuine in-app popups (messenger/facebook login) open as a window.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (isInternalUrl(url)) {
+    const target = unwrapFbLink(url);
+    if (isInternalUrl(target)) {
       return { action: 'allow' };
     }
-    openExternal(url);
+    openExternal(target);
     return { action: 'deny' };
   });
 
-  // Intercept top-level navigations to non-Messenger destinations.
+  // Top-level navigations to non-Messenger destinations → system browser.
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!isInternalUrl(url)) {
+    const target = unwrapFbLink(url);
+    if (!isInternalUrl(target)) {
       event.preventDefault();
-      openExternal(url);
+      openExternal(target);
     }
   });
 
