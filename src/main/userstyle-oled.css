@@ -1,65 +1,72 @@
 /*
  * KausApp — Pure Black (OLED) theme  (hosted; the app fetches this at runtime).
  *
- * PRINCIPLE: paint the BACKGROUND, surfaces, and popovers SOLID black via
- * Facebook's own design tokens + a few container roles. We do NOT use blanket
- * element transparency (that made popovers see-through and stripped bubbles),
- * and we NEVER touch message bubbles — they keep Messenger's real colors
- * (received = gray, sent = blue). Best with Messenger's own Dark mode on.
- * Toggle: View → "Pure black (OLED) theme".
+ * TIERED palette so the UI has depth (not a flat void):
+ *   - backmost background / large regions  -> #000 (true black, OLED win)
+ *   - elevated surfaces (cards, composer, search) -> #17171a (subtle contrast)
+ *   - overlays (popovers, menus, dialogs)   -> #202024 (pop above surfaces, opaque)
+ * Message BUBBLES are never touched -> they keep Messenger's real colors.
+ * The app only injects this when Messenger is in dark mode. Toggle: View → OLED.
  */
 
-/* 1) Document root → pure black. */
+/* Backmost background → true black. */
 html, body, #facebook { background: #000 !important; }
 
-/* 2) Override Facebook SURFACE / wash / popover tokens to black. These are the
- *    backgrounds behind everything — NOT the message-bubble color tokens, which
- *    we intentionally leave alone so bubbles keep their native colors. */
+/* Facebook surface design tokens, tiered. (Bubble-color tokens left alone.) */
 :root, .__fb-dark-mode {
+  /* backmost washes + large areas → pure black */
   --web-wash: #000 !important;
   --wash: #000 !important;
   --secondary-wash: #000 !important;
   --tertiary-wash: #000 !important;
-  --surface-background: #000 !important;
-  --card-background: #000 !important;
-  --elevated-card-background: #000 !important;
-  --messenger-card-background: #000 !important;
-  --message-list-background: #000 !important;   /* conversation backdrop, not the bubble */
-  --left-nav-background: #000 !important;
   --base-overlay-background: #000 !important;
-  --dialog-view-background: #000 !important;
-  --popover-background: #000 !important;
-  --menu-background: #000 !important;
-  --tooltip-background: #000 !important;
-  --comment-background: #0d0d0d !important;
-  --highlight-bg: #0d0d0d !important;
-  --hover-overlay: rgba(255, 255, 255, 0.06) !important;
+  --left-nav-background: #000 !important;
+  --message-list-background: #000 !important;
+
+  /* elevated surfaces → subtle contrast so they read as panels */
+  --surface-background: #17171a !important;
+  --card-background: #17171a !important;
+  --elevated-card-background: #1c1c20 !important;
+  --messenger-card-background: #17171a !important;
+  --comment-background: #1a1a1e !important;
+  --highlight-bg: #1f1f23 !important;
+  --secondary-button-background: #1f1f23 !important;
+  --primary-deemphasized-button-background: #1f1f23 !important;
+
+  /* overlays → a touch higher so they sit above surfaces */
+  --popover-background: #202024 !important;
+  --menu-background: #202024 !important;
+  --dialog-view-background: #202024 !important;
+  --tooltip-background: #202024 !important;
+
+  --hover-overlay: rgba(255, 255, 255, 0.07) !important;
+  --divider: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* 3) Solid black on the major regions AND overlays/popovers/menus so nothing is
- *    see-through (fixes the transparent search dropdown jumbling with the inbox).
- *    These are CONTAINERS, never bubbles. */
+/* Large regions → true black (the backmost layer). */
 :where([role="main"], [role="navigation"], [role="grid"], [role="complementary"],
-       [role="banner"], [role="region"], [role="dialog"], [role="menu"],
-       [role="listbox"], [role="combobox"], [role="tooltip"]) {
+       [role="banner"], [role="region"]) {
   background-color: #000 !important;
   background-image: none !important;
 }
 
-/* 4) Kill ONLY the per-chat gradient/wallpaper "chat theme" — a full-bleed div
- *    behind the messages, identified by its specific utility-class signature.
- *    We must NOT use a broad [style*=gradient] rule: Messenger's BUBBLES are also
- *    gradients, so a broad rule turns blue/themed "own" bubbles black. */
+/* Overlays/popovers/menus → elevated + OPAQUE (no see-through jumble). */
+:where([role="dialog"], [role="menu"], [role="listbox"], [role="combobox"],
+       [role="tooltip"]) {
+  background-color: #202024 !important;
+  background-image: none !important;
+}
+
+/* Kill ONLY the per-chat gradient/wallpaper div (NOT bubbles — bubbles are
+ * gradients too; a broad rule would black them out). */
 .x9f619.x1ja2u2z.x1xsqp64.x18d0r48,
 .x9f619.x1ja2u2z.x18d0r48 {
   background-image: none !important;
   background: #000 !important;
 }
 
-/* 5) Composer / input fields kept faintly visible against pure black. */
+/* Composer / input fields → elevated surface tone so the text box reads as a
+ * deliberate panel (fixes the stray "dark rectangle" against pure black). */
 :where(input, textarea, [contenteditable="true"], [role="textbox"]) {
-  background-color: #0d0d0d !important;
+  background-color: #17171a !important;
 }
-
-/* NOTE: intentionally NO blanket container transparency and NO bubble-color
- * overrides — message bubbles render in Messenger's native colors. */
