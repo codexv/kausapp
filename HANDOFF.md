@@ -68,6 +68,23 @@ Messenger/
 
 ## Changelog
 
+### 2026-06-13 — OLED only-in-dark-mode guard → v0.1.10
+- Bug: enabling OLED on a **light** page (login screen, or Messenger in light mode) forced
+  backgrounds black → dark text invisible → "just a black window." Confirmed via repro.
+- Fix (`main.js`): `applyOledTheme` now checks `pageIsDark()` (body bg luminance < 110) and **only
+  injects OLED when the page is actually dark**; the menu toggle shows a hint ("turn on Messenger
+  Dark mode first") when blocked; on load it retries the dark-guarded apply briefly (SPA settle /
+  login→app). CSS-scoping to `.__fb-dark-mode` was not viable (marker absent on login page / not on
+  a stable element), so the guard lives in the app.
+- Context (recent, since v0.1.9): OLED reworked to **token-based** (paint surfaces/popovers black via
+  FB design tokens, drop blanket transparency) — fixed transparent search dropdown + restored bubble
+  colors; then stopped the broad `[style*=gradient]` rule blacking **bubble** gradients (default
+  "own" bubbles were turning black instead of blue) — now only the specific wallpaper div is killed.
+- Also recently: rebrand Kausapp→**KausApp** (v0.1.8), consistent self-signed mac signing (v0.1.9),
+  footer logo → "Coders Republic (coders.ph)" text, **~/ops onboarding** (admin re-ported to
+  127.0.0.1:**8800**, registry updated), and `PLAN-MULTI-SERVICE.md` (scope: multi-service container
+  of official web apps + theming; no integration).
+
 ### 2026-06-11 — admin.kausapp.com: root cause = tailscale-serve owns :443 → switched to HTTP
 - "Can't open admin.kausapp.com" (TLS `internal_error` over the tunnel) root cause found:
   **`tailscale serve` owns TCP :443 on the tailnet IP** (config: `TCP 443/8443 HTTPS:true` for

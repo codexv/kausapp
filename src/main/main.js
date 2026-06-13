@@ -134,7 +134,39 @@ const compactRef = { get value() { return compactCssKey; }, set value(v) { compa
 const oledRef = { get value() { return oledCssKey; }, set value(v) { oledCssKey = v; } };
 
 function applyCompactSidebar(enable) { return toggleUserStyle('compact', COMPACT_CSS_PATH, compactRef, enable); }
-function applyOledTheme(enable) { return toggleUserStyle('oled', OLED_CSS_PATH, oledRef, enable); }
+
+// Is the Messenger page currently in DARK mode? (low body-background luminance).
+// OLED forces backgrounds black; on a LIGHT page that turns dark text invisible
+// (a "black window"), so we only ever apply OLED when the page is already dark.
+async function pageIsDark() {
+  if (!mainWindow) return false;
+  try {
+    return !!(await mainWindow.webContents.executeJavaScript(
+      "(function(){try{var m=(getComputedStyle(document.body).backgroundColor||'').match(/\\d+/g);" +
+      "if(!m)return false;return (0.299*+m[0]+0.587*+m[1]+0.114*+m[2])<110;}catch(e){return false;}})()",
+      true));
+  } catch { return false; }
+}
+
+// OLED is guarded: only inject when the page is in dark mode. `userInitiated`
+// (the menu toggle) shows a hint when blocked; auto re-applies (on load) stay silent.
+async function applyOledTheme(enable, userInitiated = false) {
+  if (enable) {
+    if (!(await pageIsDark())) {
+      if (userInitiated && mainWindow) {
+        dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          buttons: ['OK'],
+          title: 'Turn on Messenger Dark mode first',
+          message: 'OLED applies on top of Messenger’s Dark mode.',
+          detail: 'Enable Dark mode in Messenger (Settings → Preferences → appearance), then this OLED theme will kick in. It stays off on light pages so it can’t black out the screen.'
+        });
+      }
+      return; // never black out a light page
+    }
+  }
+  return toggleUserStyle('oled', OLED_CSS_PATH, oledRef, enable);
+}
 
 // ---------------------------------------------------------------------------
 // Window state persistence (size + position) — stored in userData/window-state.json
@@ -251,7 +283,19 @@ function createWindow() {
     oledCssKey = null;
     const s = loadSettings();
     if (s.compactSidebar) applyCompactSidebar(true);
-    if (s.oledTheme) applyOledTheme(true);
+    if (s.oledTheme) {
+      // Messenger's dark styling can settle after load (SPA), and a fresh launch
+      // may show the light login page first. Retry the dark-guarded apply briefly;
+      // it injects only once the page is actually dark, and stops once applied.
+      let tries = 0;
+      const t = setInterval(() => {
+        if (oledCssKey !== null || ++tries > 8 || !mainWindow || !loadSettings().oledTheme) {
+          clearInterval(t);
+          return;
+        }
+        applyOledTheme(true);
+      }, 800);
+    }
     // Default the app one step smaller than 100% (90%) for a denser, more
     // native feel. Respects a saved zoomFactor if the user changed it.
     const z = loadSettings().zoomFactor;
@@ -357,7 +401,7 @@ function buildMenu() {
           checked: !!loadSettings().oledTheme,
           click: (item) => {
             saveSettings({ oledTheme: item.checked });
-            applyOledTheme(item.checked);
+            applyOledTheme(item.checked, true);
           }
         },
         { type: 'separator' },
