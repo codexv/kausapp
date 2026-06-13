@@ -70,3 +70,11 @@ html, body, #facebook { background: #000 !important; }
 :where(input, textarea, [contenteditable="true"], [role="textbox"]) {
   background-color: #17171a !important;
 }
+
+/* The composer input "pill" gets tinted with the chat's THEME color
+ * (e.g. rgb(73,73,108) purple), which on OLED reads as a stray rectangle.
+ * Neutralize it to the same elevated tone as the field inside it. */
+.x16sw7j7.x12ol6y4.x180vkcf.x1khw62d.x709u02 {
+  background-color: #17171a !important;
+  background-image: none !important;
+}
