@@ -30,10 +30,19 @@ export async function onRequestPost(context) {
     screenshot = '';
   }
 
+  // Optional structured diagnostics (e.g. OLED theme DOM capture). Kept in a
+  // separate field so it isn't subject to the 5000-char description cap.
+  const diagnostics = typeof data.diagnostics === 'string'
+    ? data.diagnostics.slice(0, 200_000)
+    : '';
+  const kind = String((data && data.kind) || 'bug').slice(0, 32);
+
   const ts = new Date().toISOString();
   const id = `report:${ts}-${crypto.randomUUID()}`;
   const record = {
     description,
+    diagnostics,
+    kind,
     screenshot,
     version: String((data && data.version) || ''),
     platform: String((data && data.platform) || ''),

@@ -66,6 +66,10 @@ h1{font-size:22px;font-weight:800}
 .card .meta{font-size:12px;color:#8fa3c8;margin-bottom:8px}
 .card .desc{white-space:pre-wrap;line-height:1.55;font-size:14px}
 .badge{display:inline-block;background:rgba(20,86,255,.18);border:1px solid rgba(59,130,246,.5);color:#cfe0ff;border-radius:999px;padding:2px 10px;font-size:11px;margin-right:6px}
+.badge.kind{background:rgba(255,176,32,.16);border-color:rgba(255,176,32,.5);color:#ffd98a}
+.diag{margin-top:10px}
+.diag summary{cursor:pointer;color:#ffd98a;font-size:13px;font-weight:600}
+.diag pre{margin-top:8px;background:#0a0e1a;border:1px solid #22304f;border-radius:8px;padding:12px;font-size:11px;line-height:1.45;overflow:auto;max-height:340px;white-space:pre-wrap;word-break:break-word}
 .shot img{width:100%;border-radius:10px;border:1px solid #22304f;cursor:zoom-in}
 .noshot{color:#5f6f92;font-size:12px;font-style:italic}
 #lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;cursor:zoom-out;align-items:center;justify-content:center;padding:24px}
@@ -86,6 +90,14 @@ def render(reports):
         country = html.escape(str(r.get("country", "")))
         desc = html.escape(str(r.get("description", "")))
         key = html.escape(str(r.get("_key", "")))
+        kind = html.escape(str(r.get("kind", "")))
+        diag = str(r.get("diagnostics", ""))
+        diag_html = (
+            f'<details class="diag"><summary>Theme diagnostics</summary>'
+            f'<pre>{html.escape(diag)}</pre></details>'
+            if diag.strip() else ''
+        )
+        kind_badge = '<span class="badge kind">diagnostics</span>' if kind == "diagnostics" else ''
         shot = r.get("screenshot", "")
         shot_html = (
             f'<img class="shot-img" src="{html.escape(shot)}" alt="screenshot" loading="lazy">'
@@ -96,11 +108,12 @@ def render(reports):
         <div class="card">
           <div>
             <div class="meta">
-              <span class="badge">v{ver}</span><span class="badge">{plat}</span>
+              {kind_badge}<span class="badge">v{ver}</span><span class="badge">{plat}</span>
               {('<span class="badge">'+country+'</span>') if country else ''}
               <span>{ts}</span>
             </div>
             <div class="desc">{desc}</div>
+            {diag_html}
             <form method="post" action="/delete" onsubmit="return confirm('Delete this report?')">
               <input type="hidden" name="key" value="{key}">
               <button class="del" type="submit">Delete</button>

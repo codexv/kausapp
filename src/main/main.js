@@ -450,6 +450,10 @@ function buildMenu() {
           label: 'Report a Bug…',
           click: () => openBugReport()
         },
+        {
+          label: 'Send Theme Diagnostics…',
+          click: () => sendThemeDiagnostics()
+        },
         { type: 'separator' },
         {
           label: 'KausApp Website',
@@ -582,6 +586,119 @@ function registerReportIpc() {
   ipcMain.on('report:close', () => {
     if (reportWindow && !reportWindow.isDestroyed()) reportWindow.close();
   });
+}
+
+// ---------------------------------------------------------------------------
+// Self-diagnosing theme capture: instead of asking the user to open DevTools
+// and run console snippets, the app walks the Messenger DOM itself, collects
+// the relevant CSS variables + the distinct backgrounds present in the
+// conversation (which reveals the bubble color and the class that carries it),
+// and submits it to the report backend. One click, no console.
+// ---------------------------------------------------------------------------
+const THEME_DIAG_SCRIPT = `(() => {
+  const out = { url: location.href, vars: {}, backgrounds: [] };
+  // 1) Relevant CSS custom properties from :root (bubble/surface/accent/etc).
+  try {
+    const cs = getComputedStyle(document.documentElement);
+    const KEYS = ['bubble','message','accent','surface','card','wash','nav',
+                  'comment','highlight','primary','background'];
+    for (let i = 0; i < cs.length; i++) {
+      const prop = cs[i];
+      if (prop.indexOf('--') === 0 && KEYS.some(k => prop.indexOf(k) !== -1)) {
+        out.vars[prop] = cs.getPropertyValue(prop).trim();
+      }
+    }
+  } catch (e) { out.varsError = String(e); }
+
+  // 2) Distinct non-transparent backgrounds inside the conversation, deduped
+  //    by color+image+class. Whichever row is bluish IS the bubble; whichever
+  //    is black/gray tells us what's overriding it.
+  try {
+    const main = document.querySelector('[role="main"]') || document.body;
+    const seen = new Set();
+    const els = main.querySelectorAll('*');
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      const s = getComputedStyle(el);
+      const bg = s.backgroundColor;
+      const bgImg = s.backgroundImage;
+      const hasImg = bgImg && bgImg !== 'none';
+      const transparent = bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent';
+      if (transparent && !hasImg) continue;
+      const cls = (el.className && el.className.toString)
+        ? el.className.toString().slice(0, 110) : '';
+      const key = bg + '|' + (hasImg ? bgImg.slice(0, 50) : '') + '|' + cls;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const r = el.getBoundingClientRect();
+      out.backgrounds.push({
+        tag: el.tagName.toLowerCase(),
+        cls: cls,
+        bg: bg,
+        bgImg: hasImg ? bgImg.slice(0, 90) : '',
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+        text: (el.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 36)
+      });
+      if (out.backgrounds.length >= 80) break;
+    }
+  } catch (e) { out.bgError = String(e); }
+  return out;
+})()`;
+
+async function sendThemeDiagnostics() {
+  if (!mainWindow) return;
+
+  let diag;
+  try {
+    diag = await mainWindow.webContents.executeJavaScript(THEME_DIAG_SCRIPT, true);
+  } catch (err) {
+    diag = { error: String((err && err.message) || err) };
+  }
+
+  let screenshot = '';
+  try {
+    const img = await mainWindow.webContents.capturePage();
+    screenshot = img.toDataURL();
+  } catch {
+    /* screenshot is best-effort */
+  }
+
+  const body = {
+    kind: 'diagnostics',
+    description: '[THEME DIAGNOSTICS] OLED auto-capture (no console). See diagnostics field.',
+    diagnostics: JSON.stringify(diag, null, 2),
+    screenshot,
+    version: app.getVersion(),
+    platform: process.platform
+  };
+
+  try {
+    const res = await net.fetch(REPORT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Diagnostics sent',
+        message: 'Theme diagnostics sent — thank you!',
+        detail: 'KausApp captured the conversation colors automatically and sent '
+          + 'them. No DevTools or console needed. We’ll use this to fix the theme.'
+      });
+    } else {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+  } catch (err) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Could not send diagnostics',
+      message: 'Diagnostics could not be sent.',
+      detail: String((err && err.message) || err)
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

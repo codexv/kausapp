@@ -576,3 +576,36 @@ Messenger/
 - [ ] Verify: audio message playback, attachment send/receive, external link opening, voice call mic prompt.
 - [ ] Cross-platform build test (`npm run dist:mac` etc.).
 - [ ] Optional polish: unread badge count, desktop notifications passthrough, dark-mode sync.
+
+---
+
+## 2026-06-13 — OLED restart (minimal) + self-diagnosing theme capture → v0.1.12
+
+User was done with the manual DevTools-inspect loop for the OLED sent-bubble-black
+bug. Decision: **start the OLED theme over from scratch (minimal)** AND add a
+**self-diagnosing capture** so neither side needs the console again.
+
+- **`site/styles/oled.css` rewritten minimal & bubble-safe.** Backed up old file to
+  `backups/oled.css.<ts>.bak`. New file ONLY blackens the backmost layers:
+  `html, body, #facebook` → `#000`, plus the documented wash/nav/message-list
+  background tokens. **Removed everything that could reach a bubble**: surface/card
+  token overrides, the `.x9f619.x1ja2u2z.x18d0r48` wallpaper-kill (prime suspect —
+  generic FB utility classes also land on bubble wrappers, forcing them black),
+  the gradient rules, input/composer tinting. Messenger's native dark mode now
+  owns bubbles/panels/popovers, so colors stay correct. Synced bundled fallback
+  (`cp site/styles/oled.css src/main/userstyle-oled.css`). **Deployed to
+  kausapp.com** (`wrangler pages deploy`) — takes effect at runtime, no app
+  release needed for the bubble fix.
+- **Self-diagnosing theme capture (`Help → Send Theme Diagnostics…`).** New
+  `sendThemeDiagnostics()` in main.js runs `THEME_DIAG_SCRIPT` in the page via
+  `executeJavaScript`: collects relevant `:root` CSS custom properties
+  (bubble/surface/accent/wash/etc.) + the distinct non-transparent backgrounds in
+  the `[role=main]` conversation (deduped by color+image+class, capped at 80) —
+  which reveals the actual bubble color and the class carrying it. Captures a
+  screenshot too, POSTs to `REPORT_ENDPOINT` with `kind:'diagnostics'`. Shows a
+  confirmation dialog. **No console, one click.**
+- **Backend (`functions/api/report.js`)** now accepts a separate `diagnostics`
+  field (capped 200 KB, so it isn't subject to the 5000-char `description` cap)
+  and a `kind` field. **Admin (`admin/server.py`)** renders diagnostics in a
+  collapsible `<details><pre>` block and shows a `diagnostics` kind badge.
+  Backend deployed with the site.

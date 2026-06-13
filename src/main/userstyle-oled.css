@@ -1,82 +1,27 @@
 /*
  * KausApp — Pure Black (OLED) theme  (hosted; the app fetches this at runtime).
  *
- * TIERED palette so the UI has depth (not a flat void):
- *   - backmost background / large regions  -> #000 (true black, OLED win)
- *   - elevated surfaces (cards, composer, search) -> #17171a (subtle contrast)
- *   - overlays (popovers, menus, dialogs)   -> #202024 (pop above surfaces, opaque)
- * Message BUBBLES are never touched -> they keep Messenger's real colors.
+ * STARTING OVER — minimal & bubble-safe.
+ * We ONLY push the backmost background layers to true black. We do NOT touch
+ * surface/card tokens, gradients, wallpaper divs, inputs, or any obfuscated
+ * utility class — those are the rules that kept turning blue bubbles black.
+ * Messenger's native dark mode keeps doing everything else (bubbles, panels,
+ * popovers), so colors stay correct.
+ *
  * The app only injects this when Messenger is in dark mode. Toggle: View → OLED.
  */
 
 /* Backmost background → true black. */
 html, body, #facebook { background: #000 !important; }
 
-/* Facebook surface design tokens, tiered. (Bubble-color tokens left alone.) */
+/* The documented "wash" background tokens are the page backdrop, never bubbles.
+ * Pushing just these to black blackens the empty areas without reaching any
+ * message surface. */
 :root, .__fb-dark-mode {
-  /* backmost washes + large areas → pure black */
   --web-wash: #000 !important;
   --wash: #000 !important;
   --secondary-wash: #000 !important;
   --tertiary-wash: #000 !important;
-  --base-overlay-background: #000 !important;
   --left-nav-background: #000 !important;
   --message-list-background: #000 !important;
-
-  /* surfaces → pure black (these tokens drive the conversation area, so any
-   * lift here grays out the whole chat — keep them #000). */
-  --surface-background: #000 !important;
-  --card-background: #000 !important;
-  --elevated-card-background: #000 !important;
-  --messenger-card-background: #000 !important;
-  --comment-background: #000 !important;
-  --highlight-bg: #0d0d0d !important;
-  --secondary-button-background: #0d0d0d !important;
-  --primary-deemphasized-button-background: #0d0d0d !important;
-
-  /* ONLY overlays get a slight lift (so popovers are visible + opaque, not the
-   * backmost background). */
-  --popover-background: #1a1a1d !important;
-  --menu-background: #1a1a1d !important;
-  --dialog-view-background: #1a1a1d !important;
-  --tooltip-background: #1a1a1d !important;
-
-  --hover-overlay: rgba(255, 255, 255, 0.07) !important;
-  --divider: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Large regions → true black (the backmost layer). */
-:where([role="main"], [role="navigation"], [role="grid"], [role="complementary"],
-       [role="banner"], [role="region"]) {
-  background-color: #000 !important;
-  background-image: none !important;
-}
-
-/* Overlays/popovers/menus → elevated + OPAQUE (no see-through jumble). */
-:where([role="dialog"], [role="menu"], [role="listbox"], [role="combobox"],
-       [role="tooltip"]) {
-  background-color: #1a1a1d !important;
-  background-image: none !important;
-}
-
-/* Kill ONLY the per-chat gradient/wallpaper div (NOT bubbles — bubbles are
- * gradients too; a broad rule would black them out). */
-.x9f619.x1ja2u2z.x1xsqp64.x18d0r48,
-.x9f619.x1ja2u2z.x18d0r48 {
-  background-image: none !important;
-  background: #000 !important;
-}
-
-/* Composer / input fields → elevated surface tone so the text box reads as a
- * deliberate panel (fixes the stray "dark rectangle" against pure black). */
-:where(input, textarea, [contenteditable="true"], [role="textbox"]) {
-  background-color: #0d0d0d !important;
-}
-
-/* The composer input "pill" gets tinted with the chat's THEME color
- * (e.g. rgb(73,73,108) purple), which on OLED reads as a stray rectangle.
- * Neutralize it to the same elevated tone as the field inside it. */
-.x16sw7j7.x12ol6y4.x180vkcf.x1khw62d.x709u02 {
-  background-color: #0d0d0d !important;
-  background-image: none !important;
 }
