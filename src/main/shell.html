@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KausApp</title>
+  <style>
+    :root {
+      --bar-h: 56px;
+      --bg: #000;
+      --bar-bg: #0a0a0c;
+      --bar-border: rgba(255, 255, 255, 0.08);
+      --icon-idle: rgba(255, 255, 255, 0.62);
+      --icon-hover: rgba(255, 255, 255, 0.12);
+      --accent: #1456ff;
+      --badge: #ff3b30;
+      --text: #e8eefc;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+    html, body { height: 100%; background: var(--bg); overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text); }
+
+    /* The service web views cover everything above this bar; only the bar shows. */
+    .bar {
+      position: fixed; left: 0; right: 0; bottom: 0; height: var(--bar-h);
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 10px;
+      background: var(--bar-bg);
+      border-top: 1px solid var(--bar-border);
+      -webkit-app-region: drag; /* let users drag the window by the empty bar */
+    }
+    .services { display: flex; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
+    .spacer { flex: 1 1 auto; }
+    .actions { display: flex; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
+
+    .btn {
+      position: relative;
+      width: 44px; height: 44px; border-radius: 12px; border: none;
+      background: transparent; cursor: pointer; color: var(--icon-idle);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.13s ease, color 0.13s ease, transform 0.1s ease;
+    }
+    .btn:hover { background: var(--icon-hover); color: #fff; }
+    .btn:active { transform: scale(0.94); }
+
+    /* Active service: subtle pill + accent underline. */
+    .btn.active { background: rgba(20, 86, 255, 0.16); color: #fff; }
+    .btn.active::after {
+      content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+      width: 16px; height: 2.5px; border-radius: 2px; background: var(--accent);
+    }
+
+    .ico { width: 24px; height: 24px; border-radius: 6px; object-fit: cover; pointer-events: none; }
+    /* Fallback monogram chip when a favicon hasn't loaded yet. */
+    .chip {
+      width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff; pointer-events: none;
+    }
+
+    /* Unread badge. */
+    .badge {
+      position: absolute; top: 5px; right: 5px; min-width: 16px; height: 16px; padding: 0 4px;
+      border-radius: 999px; background: var(--badge); color: #fff; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+      box-shadow: 0 0 0 2px var(--bar-bg); pointer-events: none;
+    }
+    .badge.dot { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 7px; right: 8px; }
+
+    .sep { width: 1px; height: 26px; background: var(--bar-border); margin: 0 4px; -webkit-app-region: no-drag; }
+
+    .glyph { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Tooltip. */
+    .btn[data-tip]:hover::before {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: #1c1c1f; color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap;
+      padding: 5px 9px; border-radius: 7px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <nav class="bar">
+    <div class="services" id="services"></div>
+    <div class="spacer"></div>
+    <div class="actions">
+      <button class="btn" id="add" data-tip="Add a service" aria-label="Add a service">
+        <svg class="glyph" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div class="sep"></div>
+      <button class="btn" id="settings" data-tip="Settings" aria-label="Settings">
+        <svg class="glyph" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <script>
+    var servicesEl = document.getElementById('services');
+
+    function initial(name) { return (name || '?').trim().charAt(0).toUpperCase(); }
+
+    function render(state) {
+      var list = (state && state.services) || [];
+      servicesEl.innerHTML = '';
+      list.forEach(function (svc) {
+        var btn = document.createElement('button');
+        btn.className = 'btn' + (svc.active ? ' active' : '');
+        btn.setAttribute('data-tip', svc.name);
+        btn.setAttribute('aria-label', svc.name);
+
+        if (svc.favicon) {
+          var img = document.createElement('img');
+          img.className = 'ico';
+          img.src = svc.favicon;
+          img.onerror = function () { btn.replaceChild(makeChip(svc), img); };
+          btn.appendChild(img);
+        } else {
+          btn.appendChild(makeChip(svc));
+        }
+
+        if (svc.unread > 0) {
+          var b = document.createElement('span');
+          b.className = 'badge' + (svc.unread > 9 ? '' : (svc.unread >= 1 ? '' : ' dot'));
+          b.textContent = svc.unread > 99 ? '99+' : String(svc.unread);
+          btn.appendChild(b);
+        }
+
+        btn.addEventListener('click', function () { window.shell.switchTo(svc.id); });
+        servicesEl.appendChild(btn);
+      });
+    }
+
+    function makeChip(svc) {
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.style.background = svc.color || '#3b82f6';
+      chip.textContent = initial(svc.name);
+      return chip;
+    }
+
+    document.getElementById('add').addEventListener('click', function () { window.shell.addService(); });
+    document.getElementById('settings').addEventListener('click', function () { window.shell.openSettings('appearance'); });
+
+    window.shell.onState(render);
+    window.shell.ready();
+  </script>
+</body>
+</html>

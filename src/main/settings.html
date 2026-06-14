@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings</title>
+  <style>
+    :root {
+      --bg: #0a0a0c; --panel: #141417; --panel-2: #1a1a1d; --border: rgba(255,255,255,0.08);
+      --text: #e8eefc; --muted: #9fb3d8; --accent: #1456ff; --accent-2: #3b82f6;
+      --good: #25d366;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--text); overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex; flex-direction: column;
+      animation: fade 0.16s ease;
+    }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 22px; border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; flex: 1; }
+    .close {
+      width: 34px; height: 34px; border-radius: 9px; border: none; background: transparent;
+      color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .close:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+    .body { flex: 1; display: flex; min-height: 0; }
+    .tabs {
+      width: 184px; flex: 0 0 184px; padding: 14px 10px; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .tab {
+      text-align: left; padding: 10px 12px; border-radius: 9px; border: none; background: transparent;
+      color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .tab:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .tab.active { background: rgba(20,86,255,0.16); color: #fff; }
+    .tab .d { width: 16px; height: 16px; opacity: 0.9; }
+
+    .pane { flex: 1; overflow-y: auto; padding: 24px 28px; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; }
+
+    .row {
+      display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px;
+      background: var(--panel); border: 1px solid var(--border); margin-bottom: 10px;
+    }
+    .row .meta { flex: 1; min-width: 0; }
+    .row .title { font-size: 14px; font-weight: 600; }
+    .row .sub { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+    /* Toggle switch. */
+    .switch { position: relative; width: 44px; height: 26px; flex: 0 0 44px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: #3a3a40; border-radius: 999px; cursor: pointer; transition: background 0.15s ease;
+    }
+    .slider::before {
+      content: ''; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: transform 0.15s ease;
+    }
+    .switch input:checked + .slider { background: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(18px); }
+
+    .chip { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; flex: 0 0 30px; }
+
+    .reorder { display: flex; gap: 4px; }
+    .reorder button {
+      width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel-2);
+      color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    }
+    .reorder button:hover { color: #fff; border-color: var(--accent-2); }
+    .reorder button:disabled { opacity: 0.3; cursor: default; }
+
+    .stepper { display: flex; align-items: center; gap: 10px; }
+    .stepper button {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2);
+      color: #fff; cursor: pointer; font-size: 18px; line-height: 1;
+    }
+    .stepper button:hover { border-color: var(--accent-2); }
+    .stepper .val { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    .btn-line { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+    .lbtn {
+      padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel);
+      color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .lbtn:hover { border-color: var(--accent-2); background: var(--panel-2); }
+    .lbtn.primary { background: var(--accent); border-color: var(--accent); }
+    .lbtn.primary:hover { background: #2f6bff; }
+
+    .hint { font-size: 12px; color: var(--muted); margin: 4px 2px 16px; line-height: 1.5; }
+    .about { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.6; }
+    .about a { color: #cfe0ff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Settings</h1>
+    <button class="close" id="close" aria-label="Close">✕</button>
+  </header>
+  <div class="body">
+    <nav class="tabs">
+      <button class="tab" data-tab="appearance">🎨&nbsp; Appearance</button>
+      <button class="tab" data-tab="services">💬&nbsp; Services</button>
+      <button class="tab" data-tab="general">⚙️&nbsp; General</button>
+    </nav>
+    <div class="pane">
+      <!-- APPEARANCE -->
+      <section class="section" id="s-appearance">
+        <h2>Theme</h2>
+        <div class="row">
+          <div class="meta">
+            <div class="title">Pure Black (OLED)</div>
+            <div class="sub">True-black backgrounds for OLED screens. Applies on top of Messenger's Dark mode; bubbles keep their real colors.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="oled"><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div class="meta">
+            <div class="title">Compact chat list</div>
+            <div class="sub">Collapse Messenger's conversation list to an avatar-only rail.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="compact"><span class="slider"></span></label>
+        </div>
+        <p class="hint">Themes are tuned for Messenger today. Other services use their own dark mode for now — more theming is coming.</p>
+
+        <h2>Zoom</h2>
+        <div class="row">
+          <div class="meta"><div class="title">Interface zoom</div><div class="sub">Scale the active service's web view.</div></div>
+          <div class="stepper">
+            <button id="zoom-out">−</button>
+            <span class="val" id="zoom-val">90%</span>
+            <button id="zoom-in">+</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SERVICES -->
+      <section class="section" id="s-services">
+        <h2>Messaging services</h2>
+        <p class="hint">Toggle services on or off and reorder how they appear in the bottom bar. Each keeps its own independent login.</p>
+        <div id="svc-list"></div>
+      </section>
+
+      <!-- GENERAL -->
+      <section class="section" id="s-general">
+        <h2>Startup &amp; tray</h2>
+        <div class="row">
+          <div class="meta"><div class="title">Launch at login</div><div class="sub">Start KausApp automatically when you sign in.</div></div>
+          <label class="switch"><input type="checkbox" id="login"><span class="slider"></span></label>
+        </div>
+
+        <h2>Updates &amp; support</h2>
+        <div class="btn-line">
+          <button class="lbtn primary" id="check-updates">Check for Updates</button>
+          <button class="lbtn" id="report-bug">Report a Bug</button>
+          <button class="lbtn" id="diagnostics">Send Theme Diagnostics</button>
+        </div>
+
+        <div class="about">
+          <div id="ver">KausApp</div>
+          By Coders Republic —
+          <a id="site">kausapp.com</a> ·
+          <a id="notes">Release notes</a><br>
+          Not affiliated with Meta. "Messenger", "WhatsApp", "Instagram" are trademarks of Meta Platforms, Inc.
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    var STATE = null;
+
+    function pct(z) { return Math.round(z * 100) + '%'; }
+
+    function selectTab(name) {
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('active', t.dataset.tab === name); });
+      document.querySelectorAll('.section').forEach(function (s) { s.classList.toggle('active', s.id === 's-' + name); });
+    }
+
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.addEventListener('click', function () { selectTab(t.dataset.tab); });
+    });
+    document.getElementById('close').addEventListener('click', function () { window.settingsApi.close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') window.settingsApi.close(); });
+
+    function renderServices() {
+      var wrap = document.getElementById('svc-list');
+      wrap.innerHTML = '';
+      STATE.services.forEach(function (svc, idx) {
+        var row = document.createElement('div');
+        row.className = 'row';
+
+        var chip = document.createElement('div');
+        chip.className = 'chip'; chip.style.background = svc.color; chip.textContent = svc.name.charAt(0);
+        row.appendChild(chip);
+
+        var meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = '<div class="title">' + svc.name + '</div><div class="sub">' +
+          (svc.themeable ? 'Official web app · themeable' : 'Official web app') + '</div>';
+        row.appendChild(meta);
+
+        var reorder = document.createElement('div');
+        reorder.className = 'reorder';
+        var up = document.createElement('button'); up.textContent = '↑'; up.disabled = idx === 0;
+        var dn = document.createElement('button'); dn.textContent = '↓'; dn.disabled = idx === STATE.services.length - 1;
+        up.addEventListener('click', function () { move(idx, -1); });
+        dn.addEventListener('click', function () { move(idx, 1); });
+        reorder.appendChild(up); reorder.appendChild(dn);
+        row.appendChild(reorder);
+
+        var sw = document.createElement('label'); sw.className = 'switch';
+        var inp = document.createElement('input'); inp.type = 'checkbox'; inp.checked = svc.enabled;
+        inp.addEventListener('change', function () { svc.enabled = inp.checked; commitServices(); });
+        var sl = document.createElement('span'); sl.className = 'slider';
+        sw.appendChild(inp); sw.appendChild(sl);
+        row.appendChild(sw);
+
+        wrap.appendChild(row);
+      });
+    }
+
+    function move(idx, dir) {
+      var j = idx + dir;
+      if (j < 0 || j >= STATE.services.length) return;
+      var tmp = STATE.services[idx]; STATE.services[idx] = STATE.services[j]; STATE.services[j] = tmp;
+      renderServices(); commitServices();
+    }
+
+    function commitServices() {
+      var order = STATE.services.map(function (s) { return s.id; });
+      var enabled = STATE.services.filter(function (s) { return s.enabled; }).map(function (s) { return s.id; });
+      if (!enabled.length) { // never disable the last one
+        STATE.services[0].enabled = true; enabled = [STATE.services[0].id]; renderServices();
+      }
+      window.settingsApi.patch({ serviceOrder: order, enabledServices: enabled });
+    }
+
+    document.getElementById('oled').addEventListener('change', function (e) {
+      window.settingsApi.patch({ oledTheme: e.target.checked });
+    });
+    document.getElementById('compact').addEventListener('change', function (e) {
+      window.settingsApi.patch({ compactSidebar: e.target.checked });
+    });
+    document.getElementById('login').addEventListener('change', function (e) {
+      window.settingsApi.patch({ launchAtLogin: e.target.checked });
+    });
+
+    function setZoom(z) {
+      z = Math.min(2, Math.max(0.5, Math.round(z * 10) / 10));
+      STATE.settings.zoomFactor = z;
+      document.getElementById('zoom-val').textContent = pct(z);
+      window.settingsApi.patch({ zoomFactor: z });
+    }
+    document.getElementById('zoom-in').addEventListener('click', function () { setZoom(STATE.settings.zoomFactor + 0.1); });
+    document.getElementById('zoom-out').addEventListener('click', function () { setZoom(STATE.settings.zoomFactor - 0.1); });
+
+    document.getElementById('check-updates').addEventListener('click', function () { window.settingsApi.action('check-updates'); });
+    document.getElementById('report-bug').addEventListener('click', function () { window.settingsApi.action('report-bug'); });
+    document.getElementById('diagnostics').addEventListener('click', function () { window.settingsApi.action('diagnostics'); });
+    document.getElementById('site').addEventListener('click', function () { window.settingsApi.action('open-url', 'https://kausapp.com'); });
+    document.getElementById('notes').addEventListener('click', function () { window.settingsApi.action('open-url', 'https://github.com/codexv/kausapp/releases'); });
+
+    window.settingsApi.onFocusTab(function (tab) { if (tab) selectTab(tab); });
+
+    (async function init() {
+      STATE = await window.settingsApi.load();
+      document.getElementById('oled').checked = STATE.settings.oledTheme;
+      document.getElementById('compact').checked = STATE.settings.compactSidebar;
+      document.getElementById('login').checked = STATE.settings.launchAtLogin;
+      document.getElementById('zoom-val').textContent = pct(STATE.settings.zoomFactor);
+      document.getElementById('ver').textContent = 'KausApp v' + STATE.version;
+      renderServices();
+      selectTab('appearance');
+    })();
+  </script>
+</body>
+</html>

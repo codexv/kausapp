@@ -609,3 +609,43 @@ bug. Decision: **start the OLED theme over from scratch (minimal)** AND add a
   and a `kind` field. **Admin (`admin/server.py`)** renders diagnostics in a
   collapsible `<details><pre>` block and shows a `diagnostics` kind badge.
   Backend deployed with the site.
+
+---
+
+## 2026-06-15 — Multi-service shell + bottom bar + Settings panel → v0.2.0
+
+Big architectural step (Direction A: wrap each service's OFFICIAL web app + our
+theming; no bridges/scraping/unified-inbox). The app is no longer a single
+Messenger window — it's a **shell** hosting one `WebContentsView` per service,
+each with its own persistent session (independent login), kept warm for instant
+switching. User chose a **bottom bar** layout + services: Messenger (existing),
+WhatsApp, Instagram DMs, Telegram, Discord.
+
+- **`src/main/main.js` rewritten** into a multi-service shell:
+  - `SERVICES` registry (id/name/url/color/extra-hosts/themeable). Messenger keeps
+    `persist:messenger` so the existing login survives; others get `persist:<id>`.
+  - The shell BrowserWindow loads `shell.html` (its own webContents = the bottom
+    bar chrome). Service `WebContentsView`s are added to `mainWindow.contentView`,
+    sized to cover everything ABOVE the 56px bar; active one full-size, others
+    zero-sized (kept alive → real-time stays warm for all). `setActive()` re-adds
+    the view to bring it to top + focuses.
+  - Per-service external-link handling (`isInternalToService` via registrable
+    domain + per-service `extra` hosts; FB l.* shims still unwrapped/externalized).
+  - Per-service session config (media/notif permissions + downloads).
+  - Unread badges from `page-title-updated` (parse `(n)`); favicons from
+    `page-favicon-updated` → pushed to the bar.
+  - Theming (OLED/compact) now targets the **messenger view's** webContents; menu
+    + settings toggles route there. Other services use native dark for now.
+  - Bug report + theme diagnostics now capture the **active** service view.
+- **New UI files:**
+  - `shell.html` + `shell-preload.js` — the bottom bar: service icons (favicon w/
+    monogram fallback), active pill + accent underline, unread badges, tooltips,
+    `+` add, `⚙` settings. Window-draggable empty areas.
+  - `settings.html` + `settings-preload.js` — slide-over Settings (own
+    WebContentsView over the content area). Tabs: **Appearance** (OLED, compact,
+    zoom stepper), **Services** (enable/disable + reorder, last-one-stays-on),
+    **General** (launch-at-login, check updates, report bug, diagnostics, about).
+- **Native menu** trimmed: Settings… (Cmd/Ctrl+,), Reload Service, per-active-view
+  zoom, devtools; Help keeps updates/report/diagnostics. Tray unchanged.
+- Verified: clean boot, all 5 favicons render in the bar, Messenger logged-in +
+  OLED themed. NEEDS user test: switching, settings panel, the 4 new logins.

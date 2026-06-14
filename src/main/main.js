@@ -3,6 +3,7 @@
 const {
   app,
   BrowserWindow,
+  WebContentsView,
   shell,
   Menu,
   Tray,
@@ -23,23 +24,72 @@ const REPORT_ENDPOINT = 'https://kausapp.com/api/report';
 // Default zoom — one step (≈10%) smaller than 100% for a denser, app-like feel.
 const DEFAULT_ZOOM = 0.9;
 
+// Height of the bottom service bar (the app chrome strip beneath the web views).
+const BAR_HEIGHT = 56;
+
 // electron-context-menu is ESM-only (v4+), so it's loaded via dynamic import()
 // inside app.whenReady() rather than a top-level require.
 
-const MESSENGER_URL = 'https://www.messenger.com/';
-// Pretend to be a normal desktop Chrome so messenger.com serves the full web app.
+// Pretend to be a normal desktop Chrome so each service serves its full web app.
 const DESKTOP_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+// ---------------------------------------------------------------------------
+// Service registry — each is the OFFICIAL web app of a service, wrapped in its
+// own WebContentsView with an isolated, persistent session (independent login).
+// `extra` = additional hostnames that should count as "inside" the service
+// (auth, CDNs) so they don't bounce to the system browser. `themeable` = our
+// OLED/compact userstyles are tuned for it (currently Messenger only).
+// ---------------------------------------------------------------------------
+const SERVICES = [
+  {
+    id: 'messenger',
+    name: 'Messenger',
+    url: 'https://www.messenger.com/',
+    color: '#0a7cff',
+    themeable: true,
+    extra: ['facebook.com', 'fbcdn.net', 'fbsbx.com']
+  },
+  {
+    id: 'whatsapp',
+    name: 'WhatsApp',
+    url: 'https://web.whatsapp.com/',
+    color: '#25d366',
+    extra: ['whatsapp.net']
+  },
+  {
+    id: 'instagram',
+    name: 'Instagram',
+    url: 'https://www.instagram.com/direct/inbox/',
+    color: '#e1306c',
+    extra: ['cdninstagram.com', 'facebook.com', 'fbcdn.net']
+  },
+  {
+    id: 'telegram',
+    name: 'Telegram',
+    url: 'https://web.telegram.org/a/',
+    color: '#2aabee',
+    extra: []
+  },
+  {
+    id: 'discord',
+    name: 'Discord',
+    url: 'https://discord.com/app',
+    color: '#5865f2',
+    extra: ['discordapp.com', 'discordapp.net', 'discord.gg']
+  }
+];
+
+const DEFAULT_ENABLED = SERVICES.map((s) => s.id);
 
 const isDev = process.argv.includes('--dev');
 
 // ---------------------------------------------------------------------------
 // Real-time delivery: stop Chromium from throttling the app when it's in the
-// background, hidden, or occluded. Without this, the renderer's timers and the
-// Messenger push (MQTT/WebSocket) connection get throttled when the window
-// isn't focused, causing delayed messages and notifications. These switches
-// must be set BEFORE app is ready.
+// background, hidden, or occluded. Without this, renderer timers and each
+// service's push (MQTT/WebSocket) connection get throttled when not focused,
+// causing delayed messages/notifications. Set BEFORE app is ready.
 // ---------------------------------------------------------------------------
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
@@ -55,6 +105,11 @@ if (!gotLock) {
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
+
+// Live state: one entry per CREATED service view.
+const views = new Map(); // id -> { view, svc, favicon, unread }
+let activeId = null;
+let settingsView = null;
 
 // ---------------------------------------------------------------------------
 // Settings persistence (userData/settings.json) — small key/value preferences.
@@ -78,18 +133,37 @@ function saveSettings(patch) {
   }
 }
 
+// Ordered list of ENABLED service definitions (respects saved order + enabled set).
+function orderedEnabledServices() {
+  const s = loadSettings();
+  const enabled = Array.isArray(s.enabledServices) ? s.enabledServices : DEFAULT_ENABLED;
+  const order = Array.isArray(s.serviceOrder) ? s.serviceOrder : DEFAULT_ENABLED;
+  const byId = new Map(SERVICES.map((svc) => [svc.id, svc]));
+  const seen = new Set();
+  const out = [];
+  for (const id of order) {
+    if (byId.has(id) && enabled.includes(id) && !seen.has(id)) {
+      out.push(byId.get(id));
+      seen.add(id);
+    }
+  }
+  // Any enabled service not covered by the saved order (e.g. new build) → append.
+  for (const svc of SERVICES) {
+    if (enabled.includes(svc.id) && !seen.has(svc.id)) out.push(svc);
+  }
+  return out.length ? out : [SERVICES[0]];
+}
+
 // ---------------------------------------------------------------------------
-// Compact chat list: inject a userstyle that collapses Messenger's left
-// conversation list to an avatar-only rail. Toggleable + persisted.
+// Userstyles (OLED / compact). Hosted on kausapp.com so the theme can be tuned
+// without an app release; we fetch the latest at apply time and fall back to the
+// bundled copy when offline. These are tuned for Messenger's DOM (themeable).
 // ---------------------------------------------------------------------------
 const COMPACT_CSS_PATH = path.join(__dirname, 'userstyle-compact.css');
 const OLED_CSS_PATH = path.join(__dirname, 'userstyle-oled.css');
-let compactCssKey = null; // insertCSS handle, so we can remove it on toggle-off
+let compactCssKey = null; // insertCSS handle on the messenger view
 let oledCssKey = null;
 
-// Userstyles are hosted on kausapp.com so the theme can be tuned without an app
-// release. We fetch the latest at apply time and fall back to the bundled copy
-// when offline / the fetch fails.
 const REMOTE_STYLE = {
   compact: 'https://kausapp.com/styles/compact.css',
   oled: 'https://kausapp.com/styles/oled.css'
@@ -112,11 +186,18 @@ async function loadStyleCss(name, localPath) {
   }
 }
 
-// Generic userstyle toggle: insert CSS (remote-with-local-fallback) and remember
-// the handle so we can remove it again. `keyRef` is a {value} box.
-async function toggleUserStyle(name, cssPath, keyRef, enable) {
-  if (!mainWindow) return;
-  const wc = mainWindow.webContents;
+// The messenger view's webContents (theming target), or null if not created yet.
+function messengerWc() {
+  const e = views.get('messenger');
+  return e ? e.view.webContents : null;
+}
+function activeWc() {
+  const e = activeId && views.get(activeId);
+  return e ? e.view.webContents : null;
+}
+
+async function toggleUserStyle(wc, name, cssPath, keyRef, enable) {
+  if (!wc || wc.isDestroyed()) return;
   try {
     if (enable && keyRef.value === null) {
       const css = await loadStyleCss(name, cssPath);
@@ -133,23 +214,24 @@ async function toggleUserStyle(name, cssPath, keyRef, enable) {
 const compactRef = { get value() { return compactCssKey; }, set value(v) { compactCssKey = v; } };
 const oledRef = { get value() { return oledCssKey; }, set value(v) { oledCssKey = v; } };
 
-function applyCompactSidebar(enable) { return toggleUserStyle('compact', COMPACT_CSS_PATH, compactRef, enable); }
+function applyCompactSidebar(enable) {
+  return toggleUserStyle(messengerWc(), 'compact', COMPACT_CSS_PATH, compactRef, enable);
+}
 
 // Is the Messenger page currently in DARK mode? (low body-background luminance).
 // OLED forces backgrounds black; on a LIGHT page that turns dark text invisible
 // (a "black window"), so we only ever apply OLED when the page is already dark.
 async function pageIsDark() {
-  if (!mainWindow) return false;
+  const wc = messengerWc();
+  if (!wc || wc.isDestroyed()) return false;
   try {
-    return !!(await mainWindow.webContents.executeJavaScript(
+    return !!(await wc.executeJavaScript(
       "(function(){try{var m=(getComputedStyle(document.body).backgroundColor||'').match(/\\d+/g);" +
       "if(!m)return false;return (0.299*+m[0]+0.587*+m[1]+0.114*+m[2])<110;}catch(e){return false;}})()",
       true));
   } catch { return false; }
 }
 
-// OLED is guarded: only inject when the page is in dark mode. `userInitiated`
-// (the menu toggle) shows a hint when blocked; auto re-applies (on load) stay silent.
 async function applyOledTheme(enable, userInitiated = false) {
   if (enable) {
     if (!(await pageIsDark())) {
@@ -165,7 +247,7 @@ async function applyOledTheme(enable, userInitiated = false) {
       return; // never black out a light page
     }
   }
-  return toggleUserStyle('oled', OLED_CSS_PATH, oledRef, enable);
+  return toggleUserStyle(messengerWc(), 'oled', OLED_CSS_PATH, oledRef, enable);
 }
 
 // ---------------------------------------------------------------------------
@@ -184,20 +266,18 @@ function loadWindowState() {
 function saveWindowState() {
   if (!mainWindow || mainWindow.isMinimized()) return;
   try {
-    const bounds = mainWindow.getBounds();
-    fs.writeFileSync(windowStateFile(), JSON.stringify(bounds));
+    fs.writeFileSync(windowStateFile(), JSON.stringify(mainWindow.getBounds()));
   } catch {
     /* best-effort */
   }
 }
 
 // ---------------------------------------------------------------------------
-// External-link handling: anything that isn't messenger/facebook opens in the
-// user's default browser instead of inside the app.
+// External-link handling — anything outside the active service opens in the
+// user's default browser instead of a bare in-app window.
 // ---------------------------------------------------------------------------
 // Facebook/Messenger route outbound links through redirector shims
-// (l.facebook.com / lm.facebook.com / l.messenger.com /l.php?u=<encoded>).
-// Unwrap to the real destination so it can go to the system browser.
+// (l.facebook.com / lm.facebook.com / l.messenger.com / l.php?u=<encoded>).
 function unwrapFbLink(url) {
   try {
     const u = new URL(url);
@@ -209,33 +289,251 @@ function unwrapFbLink(url) {
   return url;
 }
 
-function isInternalUrl(url) {
+// Registrable-ish domain of a URL (last two labels). Good enough for grouping.
+function baseDomain(hostname) {
+  const parts = String(hostname || '').split('.');
+  return parts.length <= 2 ? hostname : parts.slice(-2).join('.');
+}
+
+function isInternalToService(svc, url) {
   try {
     const { hostname } = new URL(url);
-    // Link-redirector shims are outbound → treat as external (open in browser).
     if (['l.facebook.com', 'lm.facebook.com', 'l.messenger.com', 'lm.messenger.com'].includes(hostname)) {
-      return false;
+      return false; // link-redirector shims are always outbound
     }
-    return (
-      hostname === 'www.messenger.com' ||
-      hostname === 'messenger.com' ||
-      hostname.endsWith('.messenger.com') ||
-      hostname === 'www.facebook.com' ||
-      hostname === 'facebook.com' ||
-      hostname.endsWith('.facebook.com') ||
-      hostname.endsWith('.fbcdn.net')
-    );
+    const home = baseDomain(new URL(svc.url).hostname);
+    const allowed = new Set([home, ...(svc.extra || [])]);
+    const hb = baseDomain(hostname);
+    return allowed.has(hb) || hostname.endsWith(`.${home}`) || hostname === home;
   } catch {
     return false;
   }
 }
 
 function openExternal(url) {
-  if (/^https?:\/\//i.test(url) || /^mailto:/i.test(url)) {
-    shell.openExternal(url);
+  if (/^https?:\/\//i.test(url) || /^mailto:/i.test(url)) shell.openExternal(url);
+}
+
+// Title like "(3) Messenger" / "WhatsApp (3)" → unread count.
+function parseUnread(title) {
+  const m = /\((\d+)\+?\)/.exec(String(title || ''));
+  return m ? Math.min(parseInt(m[1], 10) || 0, 99) : 0;
+}
+
+// ---------------------------------------------------------------------------
+// Per-service session: media/notification permissions + attachment downloads.
+// ---------------------------------------------------------------------------
+const ALLOWED_PERMISSIONS = new Set([
+  'media', 'notifications', 'audioCapture', 'videoCapture',
+  'clipboard-read', 'clipboard-sanitized-write', 'fullscreen'
+]);
+
+function configureSession(partition) {
+  const ses = session.fromPartition(partition);
+  ses.setPermissionRequestHandler((wc, permission, cb) => cb(ALLOWED_PERMISSIONS.has(permission)));
+  ses.on('will-download', (event, item) => {
+    item.once('done', (e, state) => {
+      if (state === 'completed' && process.platform === 'darwin' && app.dock) {
+        app.dock.bounce('informational');
+      }
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Service views (WebContentsView, one per enabled service, kept warm).
+// ---------------------------------------------------------------------------
+function makeServiceView(svc) {
+  const partition = `persist:${svc.id}`;
+  configureSession(partition);
+
+  const view = new WebContentsView({
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      spellcheck: true,
+      backgroundThrottling: false,
+      partition
+    }
+  });
+  view.setBackgroundColor('#000000');
+
+  const wc = view.webContents;
+  wc.loadURL(svc.url, { userAgent: DESKTOP_USER_AGENT });
+
+  // External destinations → system browser; in-service navigations stay in app.
+  wc.setWindowOpenHandler(({ url }) => {
+    const target = unwrapFbLink(url);
+    if (isInternalToService(svc, target)) return { action: 'allow' };
+    openExternal(target);
+    return { action: 'deny' };
+  });
+  wc.on('will-navigate', (event, url) => {
+    const target = unwrapFbLink(url);
+    if (!isInternalToService(svc, target)) {
+      event.preventDefault();
+      openExternal(target);
+    }
+  });
+
+  const entry = { view, svc, favicon: null, unread: 0 };
+  views.set(svc.id, entry);
+
+  wc.on('page-title-updated', (e, title) => {
+    entry.unread = parseUnread(title);
+    pushState();
+  });
+  wc.on('page-favicon-updated', (e, favicons) => {
+    if (favicons && favicons.length) { entry.favicon = favicons[0]; pushState(); }
+  });
+
+  wc.on('did-finish-load', () => {
+    const s = loadSettings();
+    wc.setZoomFactor(typeof s.zoomFactor === 'number' ? s.zoomFactor : DEFAULT_ZOOM);
+
+    if (svc.themeable) {
+      compactCssKey = null; // inserted-CSS handles are invalid after a load
+      oledCssKey = null;
+      if (s.compactSidebar) applyCompactSidebar(true);
+      if (s.oledTheme) {
+        // Dark styling can settle after load (SPA); a fresh launch may show the
+        // light login page first. Retry the dark-guarded apply briefly.
+        let tries = 0;
+        const t = setInterval(() => {
+          if (oledCssKey !== null || ++tries > 8 || !views.get('messenger') || !loadSettings().oledTheme) {
+            clearInterval(t);
+            return;
+          }
+          applyOledTheme(true);
+        }, 800);
+      }
+    }
+  });
+
+  return entry;
+}
+
+function ensureServiceViews() {
+  const wanted = orderedEnabledServices();
+  // Create any missing enabled views.
+  for (const svc of wanted) {
+    if (!views.has(svc.id)) {
+      const entry = makeServiceView(svc);
+      mainWindow.contentView.addChildView(entry.view);
+    }
+  }
+  // Destroy views that are no longer enabled.
+  const wantedIds = new Set(wanted.map((s) => s.id));
+  for (const [id, entry] of [...views]) {
+    if (!wantedIds.has(id)) {
+      try { mainWindow.contentView.removeChildView(entry.view); } catch { /* */ }
+      try { entry.view.webContents.destroy(); } catch { /* */ }
+      views.delete(id);
+    }
+  }
+  // Make sure something valid is active.
+  if (!activeId || !views.has(activeId)) {
+    setActive((loadSettings().activeService && views.has(loadSettings().activeService))
+      ? loadSettings().activeService
+      : wanted[0].id);
+  } else {
+    layout();
+    pushState();
   }
 }
 
+function setActive(id) {
+  if (!views.has(id)) {
+    const svc = SERVICES.find((s) => s.id === id);
+    if (!svc) return;
+    const entry = makeServiceView(svc);
+    mainWindow.contentView.addChildView(entry.view);
+  }
+  activeId = id;
+  closeSettings();
+  // Re-adding moves the view to the top of the stack (above the others).
+  mainWindow.contentView.addChildView(views.get(id).view);
+  saveSettings({ activeService: id });
+  layout();
+  pushState();
+  const wc = activeWc();
+  if (wc && !wc.isDestroyed()) wc.focus();
+}
+
+// Position the active service view (and settings overlay) above the bottom bar.
+function layout() {
+  if (!mainWindow) return;
+  const [w, h] = mainWindow.getContentSize();
+  const contentH = Math.max(0, h - BAR_HEIGHT);
+  for (const [id, entry] of views) {
+    if (id === activeId && !settingsView) {
+      entry.view.setBounds({ x: 0, y: 0, width: w, height: contentH });
+    } else {
+      entry.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+    }
+  }
+  if (settingsView) settingsView.setBounds({ x: 0, y: 0, width: w, height: contentH });
+}
+
+// Push the bottom-bar state (services, badges, active) to the shell renderer.
+function pushState() {
+  if (!mainWindow || mainWindow.webContents.isDestroyed()) return;
+  const payload = {
+    services: orderedEnabledServices().map((svc) => {
+      const e = views.get(svc.id);
+      return {
+        id: svc.id,
+        name: svc.name,
+        color: svc.color,
+        favicon: e ? e.favicon : null,
+        unread: e ? e.unread : 0,
+        active: svc.id === activeId && !settingsView
+      };
+    }),
+    settingsOpen: !!settingsView
+  };
+  mainWindow.webContents.send('shell:state', payload);
+}
+
+// ---------------------------------------------------------------------------
+// Settings: a slide-over panel (its own WebContentsView over the content area).
+// ---------------------------------------------------------------------------
+function openSettings(tab) {
+  if (!mainWindow) return;
+  if (!settingsView) {
+    settingsView = new WebContentsView({
+      webPreferences: {
+        preload: path.join(__dirname, 'settings-preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    });
+    settingsView.setBackgroundColor('#0a0a0c');
+    settingsView.webContents.loadFile(path.join(__dirname, 'settings.html'));
+    settingsView.webContents.on('did-finish-load', () => {
+      if (settingsView) settingsView.webContents.send('settings:focus-tab', tab || 'appearance');
+    });
+  }
+  mainWindow.contentView.addChildView(settingsView); // on top
+  layout();
+  pushState();
+  settingsView.webContents.send('settings:focus-tab', tab || 'appearance');
+}
+
+function closeSettings() {
+  if (!settingsView) return;
+  try { mainWindow.contentView.removeChildView(settingsView); } catch { /* */ }
+  try { settingsView.webContents.destroy(); } catch { /* */ }
+  settingsView = null;
+  layout();
+  pushState();
+}
+
+// ---------------------------------------------------------------------------
+// Main window (the shell). Its own webContents draws the bottom bar; the service
+// views sit on top of it, covering everything except the bottom strip.
+// ---------------------------------------------------------------------------
 function createWindow() {
   const state = loadWindowState();
 
@@ -248,85 +546,40 @@ function createWindow() {
     minHeight: 400,
     title: 'KausApp',
     icon: resolveIcon(),
-    backgroundColor: '#ffffff',
+    backgroundColor: '#000000',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'shell-preload.js'),
       contextIsolation: true,
-      nodeIntegration: false,
-      spellcheck: true,
-      // Keep the renderer (and Messenger's realtime push connection) running at
-      // full speed even when the window is hidden/minimized/in the background.
-      backgroundThrottling: false,
-      partition: 'persist:messenger'
+      nodeIntegration: false
     }
   });
 
-  mainWindow.loadURL(MESSENGER_URL, { userAgent: DESKTOP_USER_AGENT });
+  mainWindow.loadFile(path.join(__dirname, 'shell.html'));
 
-  // New windows (target=_blank / window.open): unwrap FB link-shims, then open
-  // external destinations in the SYSTEM browser (deny the in-app window). Only
-  // genuine in-app popups (messenger/facebook login) open as a window.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    const target = unwrapFbLink(url);
-    if (isInternalUrl(target)) {
-      return { action: 'allow' };
-    }
-    openExternal(target);
-    return { action: 'deny' };
-  });
-
-  // Top-level navigations to non-Messenger destinations → system browser.
+  // The shell page is local chrome — never navigate it; bounce links to browser.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    const target = unwrapFbLink(url);
-    if (!isInternalUrl(target)) {
-      event.preventDefault();
-      openExternal(target);
-    }
+    if (!url.startsWith('file://')) { event.preventDefault(); openExternal(url); }
   });
+
+  mainWindow.on('resize', () => { layout(); saveWindowState(); });
+  mainWindow.on('move', saveWindowState);
 
   mainWindow.on('close', (event) => {
-    if (!isQuitting) {
-      // On macOS keep the app alive in the background like a native messenger.
-      if (process.platform === 'darwin') {
-        event.preventDefault();
-        mainWindow.hide();
-        return;
-      }
+    if (!isQuitting && process.platform === 'darwin') {
+      event.preventDefault();
+      mainWindow.hide();
+      return;
     }
     saveWindowState();
   });
 
-  mainWindow.on('resize', saveWindowState);
-  mainWindow.on('move', saveWindowState);
-
-  // Re-apply userstyles after every (re)load — inserted CSS is per page load.
   mainWindow.webContents.on('did-finish-load', () => {
-    compactCssKey = null; // previous handles are invalid after a load
-    oledCssKey = null;
-    const s = loadSettings();
-    if (s.compactSidebar) applyCompactSidebar(true);
-    if (s.oledTheme) {
-      // Messenger's dark styling can settle after load (SPA), and a fresh launch
-      // may show the light login page first. Retry the dark-guarded apply briefly;
-      // it injects only once the page is actually dark, and stops once applied.
-      let tries = 0;
-      const t = setInterval(() => {
-        if (oledCssKey !== null || ++tries > 8 || !mainWindow || !loadSettings().oledTheme) {
-          clearInterval(t);
-          return;
-        }
-        applyOledTheme(true);
-      }, 800);
-    }
-    // Default the app one step smaller than 100% (90%) for a denser, more
-    // native feel. Respects a saved zoomFactor if the user changed it.
-    const z = loadSettings().zoomFactor;
-    mainWindow.webContents.setZoomFactor(typeof z === 'number' ? z : DEFAULT_ZOOM);
+    ensureServiceViews();
+    pushState();
   });
 
-  if (isDev) {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
 }
 
 // ---------------------------------------------------------------------------
@@ -342,37 +595,6 @@ function resolveIcon() {
 }
 
 // ---------------------------------------------------------------------------
-// Permissions: allow microphone/camera (voice messages + calls), notifications,
-// and media playback. Deny everything else by default.
-// ---------------------------------------------------------------------------
-function configurePermissions() {
-  const ses = session.fromPartition('persist:messenger');
-  const ALLOWED = new Set([
-    'media', // microphone + camera (voice/video calls, audio messages)
-    'notifications',
-    'audioCapture',
-    'videoCapture',
-    'clipboard-read',
-    'clipboard-sanitized-write',
-    'fullscreen'
-  ]);
-
-  ses.setPermissionRequestHandler((webContents, permission, callback) => {
-    callback(ALLOWED.has(permission));
-  });
-
-  // Downloads (attachments): prompt for a save location, report completion.
-  ses.on('will-download', (event, item) => {
-    item.once('done', (e, state) => {
-      if (state === 'completed' && mainWindow) {
-        // Bounce the dock / flash the taskbar so the user knows it's done.
-        if (process.platform === 'darwin' && app.dock) app.dock.bounce('informational');
-      }
-    });
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Application menu
 // ---------------------------------------------------------------------------
 function buildMenu() {
@@ -384,9 +606,9 @@ function buildMenu() {
           submenu: [
             { role: 'about' },
             { type: 'separator' },
-            { role: 'hide' },
-            { role: 'hideOthers' },
-            { role: 'unhide' },
+            { label: 'Settings…', accelerator: 'Cmd+,', click: () => openSettings('appearance') },
+            { type: 'separator' },
+            { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' },
             { type: 'separator' },
             { role: 'quit' }
           ]
@@ -395,11 +617,8 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
-        {
-          label: 'Reload Messenger',
-          accelerator: 'CmdOrCtrl+R',
-          click: () => mainWindow && mainWindow.reload()
-        },
+        { label: 'Reload Service', accelerator: 'CmdOrCtrl+R', click: () => { const wc = activeWc(); if (wc) wc.reload(); } },
+        ...(isMac ? [] : [{ label: 'Settings…', accelerator: 'Ctrl+,', click: () => openSettings('appearance') }]),
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' }
       ]
@@ -408,32 +627,36 @@ function buildMenu() {
     {
       label: 'View',
       submenu: [
+        { label: 'Settings…', click: () => openSettings('appearance') },
+        { type: 'separator' },
         {
           label: 'Compact chat list (icons only)',
           type: 'checkbox',
           checked: !!loadSettings().compactSidebar,
-          click: (item) => {
-            saveSettings({ compactSidebar: item.checked });
-            applyCompactSidebar(item.checked);
-          }
+          click: (item) => { saveSettings({ compactSidebar: item.checked }); applyCompactSidebar(item.checked); }
         },
         {
-          label: 'Pure black (OLED) theme',
+          label: 'Pure Black (OLED) theme',
           type: 'checkbox',
           checked: !!loadSettings().oledTheme,
-          click: (item) => {
-            saveSettings({ oledTheme: item.checked });
-            applyOledTheme(item.checked, true);
-          }
+          click: (item) => { saveSettings({ oledTheme: item.checked }); applyOledTheme(item.checked, true); }
         },
         { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        {
+          label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus',
+          click: () => { const wc = activeWc(); if (wc) { const z = wc.getZoomFactor() + 0.1; wc.setZoomFactor(z); saveSettings({ zoomFactor: z }); } }
+        },
+        {
+          label: 'Zoom Out', accelerator: 'CmdOrCtrl+-',
+          click: () => { const wc = activeWc(); if (wc) { const z = Math.max(0.5, wc.getZoomFactor() - 0.1); wc.setZoomFactor(z); saveSettings({ zoomFactor: z }); } }
+        },
+        {
+          label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0',
+          click: () => { const wc = activeWc(); if (wc) { wc.setZoomFactor(DEFAULT_ZOOM); saveSettings({ zoomFactor: DEFAULT_ZOOM }); } }
+        },
         { type: 'separator' },
         { role: 'togglefullscreen' },
-        { type: 'separator' },
-        { role: 'toggleDevTools' }
+        { label: 'Toggle Developer Tools', accelerator: isMac ? 'Alt+Cmd+I' : 'Ctrl+Shift+I', click: () => { const wc = activeWc(); if (wc) wc.toggleDevTools(); } }
       ]
     },
     { role: 'windowMenu' },
@@ -442,27 +665,12 @@ function buildMenu() {
       submenu: [
         { label: `KausApp v${app.getVersion()}`, enabled: false },
         { type: 'separator' },
-        {
-          label: 'Check for Updates…',
-          click: () => checkForUpdates(() => mainWindow)
-        },
-        {
-          label: 'Report a Bug…',
-          click: () => openBugReport()
-        },
-        {
-          label: 'Send Theme Diagnostics…',
-          click: () => sendThemeDiagnostics()
-        },
+        { label: 'Check for Updates…', click: () => checkForUpdates(() => mainWindow) },
+        { label: 'Report a Bug…', click: () => openBugReport() },
+        { label: 'Send Theme Diagnostics…', click: () => sendThemeDiagnostics() },
         { type: 'separator' },
-        {
-          label: 'KausApp Website',
-          click: () => shell.openExternal('https://kausapp.com')
-        },
-        {
-          label: 'Release Notes',
-          click: () => shell.openExternal('https://github.com/codexv/kausapp/releases')
-        }
+        { label: 'KausApp Website', click: () => shell.openExternal('https://kausapp.com') },
+        { label: 'Release Notes', click: () => shell.openExternal('https://github.com/codexv/kausapp/releases') }
       ]
     }
   ];
@@ -475,40 +683,19 @@ function buildMenu() {
 // ---------------------------------------------------------------------------
 function buildTray() {
   const icon = resolveIcon();
-  if (!icon) return; // no icon asset yet — skip tray until one exists
-
+  if (!icon) return;
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
   tray.setToolTip('KausApp');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      {
-        label: 'Show KausApp',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.show();
-            mainWindow.focus();
-          }
-        }
-      },
-      { type: 'separator' },
-      {
-        label: 'Quit',
-        click: () => {
-          isQuitting = true;
-          app.quit();
-        }
-      }
-    ])
-  );
-  tray.on('click', () => {
-    if (mainWindow) {
-      mainWindow.isVisible() ? mainWindow.focus() : mainWindow.show();
-    }
-  });
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Show KausApp', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } } },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
+  ]));
+  tray.on('click', () => { if (mainWindow) (mainWindow.isVisible() ? mainWindow.focus() : mainWindow.show()); });
 }
 
 // ---------------------------------------------------------------------------
-// Bug reporting: capture a screenshot of the current app view + a description,
+// Bug reporting: capture a screenshot of the active service + a description,
 // then POST to the backend (stored in KV; viewable on the admin page).
 // ---------------------------------------------------------------------------
 let reportWindow = null;
@@ -516,35 +703,21 @@ let pendingScreenshot = '';
 
 async function openBugReport() {
   if (!mainWindow) return;
-  if (reportWindow && !reportWindow.isDestroyed()) {
-    reportWindow.focus();
-    return;
-  }
+  if (reportWindow && !reportWindow.isDestroyed()) { reportWindow.focus(); return; }
 
-  // Capture the Messenger view BEFORE opening the modal so the report reflects
-  // what the user was looking at.
   pendingScreenshot = '';
   try {
-    const img = await mainWindow.webContents.capturePage();
-    pendingScreenshot = img.toDataURL();
-  } catch {
-    /* screenshot is best-effort */
-  }
+    const wc = activeWc();
+    if (wc && !wc.isDestroyed()) pendingScreenshot = (await wc.capturePage()).toDataURL();
+  } catch { /* screenshot is best-effort */ }
 
   reportWindow = new BrowserWindow({
-    width: 540,
-    height: 660,
-    parent: mainWindow,
-    modal: true,
-    title: 'Report a Bug',
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
+    width: 540, height: 660, parent: mainWindow, modal: true,
+    title: 'Report a Bug', resizable: false, minimizable: false, maximizable: false,
     backgroundColor: '#000000',
     webPreferences: {
       preload: path.join(__dirname, 'report-preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
+      contextIsolation: true, nodeIntegration: false
     }
   });
   reportWindow.setMenuBarVisibility(false);
@@ -552,9 +725,7 @@ async function openBugReport() {
   reportWindow.webContents.on('did-finish-load', () => {
     if (reportWindow && !reportWindow.isDestroyed()) {
       reportWindow.webContents.send('report:init', {
-        screenshot: pendingScreenshot,
-        version: app.getVersion(),
-        platform: process.platform
+        screenshot: pendingScreenshot, version: app.getVersion(), platform: process.platform
       });
     }
   });
@@ -572,9 +743,7 @@ function registerReportIpc() {
     };
     try {
       const res = await net.fetch(REPORT_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
       const data = await res.json().catch(() => ({}));
       return { ok: res.ok && data.ok === true, error: data.error };
@@ -589,15 +758,11 @@ function registerReportIpc() {
 }
 
 // ---------------------------------------------------------------------------
-// Self-diagnosing theme capture: instead of asking the user to open DevTools
-// and run console snippets, the app walks the Messenger DOM itself, collects
-// the relevant CSS variables + the distinct backgrounds present in the
-// conversation (which reveals the bubble color and the class that carries it),
-// and submits it to the report backend. One click, no console.
+// Self-diagnosing theme capture — the app walks the conversation DOM itself
+// (CSS vars + distinct backgrounds) and submits it. One click, no console.
 // ---------------------------------------------------------------------------
 const THEME_DIAG_SCRIPT = `(() => {
   const out = { url: location.href, vars: {}, backgrounds: [] };
-  // 1) Relevant CSS custom properties from :root (bubble/surface/accent/etc).
   try {
     const cs = getComputedStyle(document.documentElement);
     const KEYS = ['bubble','message','accent','surface','card','wash','nav',
@@ -609,10 +774,6 @@ const THEME_DIAG_SCRIPT = `(() => {
       }
     }
   } catch (e) { out.varsError = String(e); }
-
-  // 2) Distinct non-transparent backgrounds inside the conversation, deduped
-  //    by color+image+class. Whichever row is bluish IS the bubble; whichever
-  //    is black/gray tells us what's overriding it.
   try {
     const main = document.querySelector('[role="main"]') || document.body;
     const seen = new Set();
@@ -632,12 +793,9 @@ const THEME_DIAG_SCRIPT = `(() => {
       seen.add(key);
       const r = el.getBoundingClientRect();
       out.backgrounds.push({
-        tag: el.tagName.toLowerCase(),
-        cls: cls,
-        bg: bg,
+        tag: el.tagName.toLowerCase(), cls: cls, bg: bg,
         bgImg: hasImg ? bgImg.slice(0, 90) : '',
-        w: Math.round(r.width),
-        h: Math.round(r.height),
+        w: Math.round(r.width), h: Math.round(r.height),
         text: (el.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 36)
       });
       if (out.backgrounds.length >= 80) break;
@@ -648,25 +806,22 @@ const THEME_DIAG_SCRIPT = `(() => {
 
 async function sendThemeDiagnostics() {
   if (!mainWindow) return;
-
+  const wc = activeWc();
   let diag;
   try {
-    diag = await mainWindow.webContents.executeJavaScript(THEME_DIAG_SCRIPT, true);
+    diag = wc && !wc.isDestroyed()
+      ? await wc.executeJavaScript(THEME_DIAG_SCRIPT, true)
+      : { error: 'no active service view' };
   } catch (err) {
     diag = { error: String((err && err.message) || err) };
   }
 
   let screenshot = '';
-  try {
-    const img = await mainWindow.webContents.capturePage();
-    screenshot = img.toDataURL();
-  } catch {
-    /* screenshot is best-effort */
-  }
+  try { if (wc && !wc.isDestroyed()) screenshot = (await wc.capturePage()).toDataURL(); } catch { /* */ }
 
   const body = {
     kind: 'diagnostics',
-    description: '[THEME DIAGNOSTICS] OLED auto-capture (no console). See diagnostics field.',
+    description: `[THEME DIAGNOSTICS] ${activeId || 'unknown'} auto-capture (no console). See diagnostics field.`,
     diagnostics: JSON.stringify(diag, null, 2),
     screenshot,
     version: app.getVersion(),
@@ -675,30 +830,87 @@ async function sendThemeDiagnostics() {
 
   try {
     const res = await net.fetch(REPORT_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok) {
       dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Diagnostics sent',
-        message: 'Theme diagnostics sent — thank you!',
-        detail: 'KausApp captured the conversation colors automatically and sent '
-          + 'them. No DevTools or console needed. We’ll use this to fix the theme.'
+        type: 'info', title: 'Diagnostics sent', message: 'Theme diagnostics sent — thank you!',
+        detail: 'KausApp captured the conversation colors automatically and sent them. No console needed.'
       });
     } else {
       throw new Error(data.error || `HTTP ${res.status}`);
     }
   } catch (err) {
     dialog.showMessageBox(mainWindow, {
-      type: 'error',
-      title: 'Could not send diagnostics',
-      message: 'Diagnostics could not be sent.',
-      detail: String((err && err.message) || err)
+      type: 'error', title: 'Could not send diagnostics',
+      message: 'Diagnostics could not be sent.', detail: String((err && err.message) || err)
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// IPC from the shell (bottom bar) and the settings panel.
+// ---------------------------------------------------------------------------
+function registerShellIpc() {
+  ipcMain.on('shell:ready', () => pushState());
+  ipcMain.on('shell:switch', (e, id) => { if (id && (views.has(id) || SERVICES.some((s) => s.id === id))) setActive(id); });
+  ipcMain.on('shell:open-settings', (e, tab) => openSettings(tab));
+
+  ipcMain.handle('settings:load', () => {
+    const s = loadSettings();
+    const enabled = Array.isArray(s.enabledServices) ? s.enabledServices : DEFAULT_ENABLED;
+    const ordered = orderedEnabledServices().map((x) => x.id);
+    // Full service list in display order (enabled first, then the rest).
+    const rest = SERVICES.filter((x) => !ordered.includes(x.id)).map((x) => x.id);
+    const displayOrder = [...ordered, ...rest];
+    return {
+      version: app.getVersion(),
+      platform: process.platform,
+      settings: {
+        oledTheme: !!s.oledTheme,
+        compactSidebar: !!s.compactSidebar,
+        zoomFactor: typeof s.zoomFactor === 'number' ? s.zoomFactor : DEFAULT_ZOOM,
+        launchAtLogin: app.getLoginItemSettings().openAtLogin
+      },
+      services: displayOrder.map((id) => {
+        const svc = SERVICES.find((x) => x.id === id);
+        return { id: svc.id, name: svc.name, color: svc.color, enabled: enabled.includes(id), themeable: !!svc.themeable };
+      })
+    };
+  });
+
+  ipcMain.handle('settings:patch', (e, patch) => {
+    patch = patch || {};
+    const updates = {};
+    if (typeof patch.oledTheme === 'boolean') updates.oledTheme = patch.oledTheme;
+    if (typeof patch.compactSidebar === 'boolean') updates.compactSidebar = patch.compactSidebar;
+    if (typeof patch.zoomFactor === 'number') updates.zoomFactor = Math.min(2, Math.max(0.5, patch.zoomFactor));
+    if (Array.isArray(patch.enabledServices)) updates.enabledServices = patch.enabledServices.filter((id) => SERVICES.some((s) => s.id === id));
+    if (Array.isArray(patch.serviceOrder)) updates.serviceOrder = patch.serviceOrder.filter((id) => SERVICES.some((s) => s.id === id));
+    if (Object.keys(updates).length) saveSettings(updates);
+
+    if ('launchAtLogin' in patch) app.setLoginItemSettings({ openAtLogin: !!patch.launchAtLogin });
+
+    // Reflect immediately.
+    if ('oledTheme' in updates) applyOledTheme(updates.oledTheme, true);
+    if ('compactSidebar' in updates) applyCompactSidebar(updates.compactSidebar);
+    if ('zoomFactor' in updates) for (const [, en] of views) { try { en.view.webContents.setZoomFactor(updates.zoomFactor); } catch { /* */ } }
+    if ('enabledServices' in updates || 'serviceOrder' in updates) ensureServiceViews();
+    pushState();
+    return { ok: true };
+  });
+
+  ipcMain.handle('settings:action', (e, msg) => {
+    const name = msg && msg.name;
+    if (name === 'check-updates') checkForUpdates(() => mainWindow);
+    else if (name === 'report-bug') openBugReport();
+    else if (name === 'diagnostics') sendThemeDiagnostics();
+    else if (name === 'open-url' && msg.arg) shell.openExternal(String(msg.arg));
+    return { ok: true };
+  });
+
+  ipcMain.on('settings:close', () => { closeSettings(); if (activeId) setActive(activeId); });
 }
 
 // ---------------------------------------------------------------------------
@@ -713,7 +925,6 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(async () => {
-  // Show version + publisher in the native About panel.
   app.setAboutPanelOptions({
     applicationName: 'KausApp',
     applicationVersion: app.getVersion(),
@@ -721,43 +932,24 @@ app.whenReady().then(async () => {
     copyright: 'Coders Republic — coders.ph'
   });
 
-  configurePermissions();
   registerReportIpc();
+  registerShellIpc();
 
-  // Right-click context menu with copy/paste, "open link externally", etc.
-  // electron-context-menu is ESM-only, so load it dynamically.
   const { default: contextMenu } = await import('electron-context-menu');
-  contextMenu({
-    showSaveImageAs: true,
-    showCopyImageAddress: true,
-    showSearchWithGoogle: false
-  });
+  contextMenu({ showSaveImageAs: true, showCopyImageAddress: true, showSearchWithGoogle: false });
 
   buildMenu();
   createWindow();
   buildTray();
 
-  // Start the GitHub-Releases-backed auto-updater (no-op in dev / unpackaged).
-  // The second arg lets the updater flip isQuitting before quitAndInstall so the
-  // macOS hide-on-close handler doesn't keep the app alive and block the update.
   initAutoUpdates(() => mainWindow, () => { isQuitting = true; });
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    } else if (mainWindow) {
-      mainWindow.show();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    else if (mainWindow) mainWindow.show();
   });
 });
 
-app.on('before-quit', () => {
-  isQuitting = true;
-  saveWindowState();
-});
+app.on('before-quit', () => { isQuitting = true; saveWindowState(); });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
