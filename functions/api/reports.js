@@ -27,7 +27,9 @@ export async function onRequestGet(context) {
   if (!env.REPORTS) return json({ ok: false, error: 'storage_unavailable' }, 500);
   if (!authed(request, url, env)) return json({ ok: false, error: 'unauthorized' }, 401);
 
-  const list = await env.REPORTS.list({ limit: 1000 });
+  // Scope to report records only — the namespace also holds rl:* rate-limit
+  // counters (numeric, auto-expiring) which must never surface as "reports".
+  const list = await env.REPORTS.list({ prefix: 'report:', limit: 1000 });
   const keys = list.keys.map((k) => k.name).sort().reverse(); // newest first (ts-prefixed)
   const reports = [];
   for (const key of keys.slice(0, 500)) {

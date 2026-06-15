@@ -3,12 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
   <title>Settings</title>
   <style>
     :root {
-      --bg: #0a0a0c; --panel: #141417; --panel-2: #1a1a1d; --border: rgba(255,255,255,0.08);
-      --text: #e8eefc; --muted: #9fb3d8; --accent: #1456ff; --accent-2: #3b82f6;
-      --good: #25d366;
+      --bg: #0a0a0c; --panel: #141417; --panel-2: #1c1c20; --border: rgba(255,255,255,0.08);
+      --text: #e8eefc; --muted: #9fb3d8; --accent: #1456ff; --accent-hover: #2f6bff;
+      --accent-soft: rgba(20,86,255,0.16);
+      /* Radius system. */
+      --r-sm: 8px; --r-md: 10px; --r-lg: 12px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
@@ -22,48 +26,51 @@
 
     header {
       display: flex; align-items: center; gap: 12px;
-      padding: 18px 22px; border-bottom: 1px solid var(--border);
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
     }
     header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; flex: 1; }
     .close {
-      width: 34px; height: 34px; border-radius: 9px; border: none; background: transparent;
+      width: 32px; height: 32px; border-radius: var(--r-sm); border: none; background: transparent;
       color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
       display: flex; align-items: center; justify-content: center;
     }
     .close:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     .body { flex: 1; display: flex; min-height: 0; }
     .tabs {
-      width: 184px; flex: 0 0 184px; padding: 14px 10px; border-right: 1px solid var(--border);
+      width: 184px; flex: 0 0 184px; padding: 12px 8px; border-right: 1px solid var(--border);
       display: flex; flex-direction: column; gap: 4px;
     }
     .tab {
-      text-align: left; padding: 10px 12px; border-radius: 9px; border: none; background: transparent;
+      text-align: left; padding: 10px 12px; border-radius: var(--r-md); border: none; background: transparent;
       color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
       display: flex; align-items: center; gap: 10px;
     }
     .tab:hover { background: rgba(255,255,255,0.05); color: #fff; }
-    .tab.active { background: rgba(20,86,255,0.16); color: #fff; }
-    .tab .d { width: 16px; height: 16px; opacity: 0.9; }
+    .tab[aria-selected="true"] { background: var(--accent-soft); color: #fff; }
+    .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .tab .ic { font-size: 15px; }
 
-    .pane { flex: 1; overflow-y: auto; padding: 24px 28px; }
+    .pane { flex: 1; overflow-y: auto; padding: 24px; }
     .section { display: none; }
     .section.active { display: block; }
-    .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; }
+    .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 12px; }
+    .section h2 + h2, .section .row + h2, .section .hint + h2 { margin-top: 24px; }
 
     .row {
-      display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px;
-      background: var(--panel); border: 1px solid var(--border); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--r-lg);
+      background: var(--panel); border: 1px solid var(--border); margin-bottom: 8px;
     }
     .row .meta { flex: 1; min-width: 0; }
     .row .title { font-size: 14px; font-weight: 600; }
-    .row .sub { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .row .sub { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
 
     /* Toggle switch. */
     .switch { position: relative; width: 44px; height: 26px; flex: 0 0 44px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
     .slider {
-      position: absolute; inset: 0; background: #3a3a40; border-radius: 999px; cursor: pointer; transition: background 0.15s ease;
+      position: absolute; inset: 0; background: #3a3a40; border-radius: 999px; transition: background 0.15s ease; pointer-events: none;
     }
     .slider::before {
       content: ''; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px;
@@ -71,67 +78,73 @@
     }
     .switch input:checked + .slider { background: var(--accent); }
     .switch input:checked + .slider::before { transform: translateX(18px); }
+    .switch input:focus-visible + .slider { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 
-    .chip { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; flex: 0 0 30px; }
+    .chip { width: 30px; height: 30px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; flex: 0 0 30px; }
 
     .reorder { display: flex; gap: 4px; }
     .reorder button {
-      width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel-2);
+      width: 28px; height: 28px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--panel-2);
       color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
     }
-    .reorder button:hover { color: #fff; border-color: var(--accent-2); }
+    .reorder button:hover { color: #fff; border-color: var(--accent); }
+    .reorder button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .reorder button:disabled { opacity: 0.3; cursor: default; }
 
-    .stepper { display: flex; align-items: center; gap: 10px; }
+    .stepper { display: flex; align-items: center; gap: 8px; }
     .stepper button {
-      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2);
+      width: 32px; height: 32px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--panel-2);
       color: #fff; cursor: pointer; font-size: 18px; line-height: 1;
     }
-    .stepper button:hover { border-color: var(--accent-2); }
+    .stepper button:hover { border-color: var(--accent); }
+    .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .stepper .val { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 
-    .btn-line { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+    .btn-line { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .lbtn {
-      padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel);
+      padding: 10px 16px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--panel);
       color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
     }
-    .lbtn:hover { border-color: var(--accent-2); background: var(--panel-2); }
+    .lbtn:hover { border-color: var(--accent); background: var(--panel-2); }
+    .lbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .lbtn.primary { background: var(--accent); border-color: var(--accent); }
-    .lbtn.primary:hover { background: #2f6bff; }
+    .lbtn.primary:hover { background: var(--accent-hover); }
 
-    .hint { font-size: 12px; color: var(--muted); margin: 4px 2px 16px; line-height: 1.5; }
-    .about { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.6; }
+    .hint { font-size: 12px; color: var(--muted); margin: 4px 0 16px; line-height: 1.5; }
+    .about { font-size: 12px; color: var(--muted); margin-top: 24px; line-height: 1.6; }
     .about a { color: #cfe0ff; cursor: pointer; }
+    .about a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .error-note { color: #ff9bb0; font-size: 13px; padding: 16px; }
   </style>
 </head>
 <body>
   <header>
     <h1>Settings</h1>
-    <button class="close" id="close" aria-label="Close">✕</button>
+    <button class="close" id="close" aria-label="Close settings">✕</button>
   </header>
   <div class="body">
-    <nav class="tabs">
-      <button class="tab" data-tab="appearance">🎨&nbsp; Appearance</button>
-      <button class="tab" data-tab="services">💬&nbsp; Services</button>
-      <button class="tab" data-tab="general">⚙️&nbsp; General</button>
+    <nav class="tabs" role="tablist" aria-label="Settings sections">
+      <button class="tab" role="tab" id="tab-appearance" aria-controls="s-appearance" data-tab="appearance"><span class="ic" aria-hidden="true">🎨</span> Appearance</button>
+      <button class="tab" role="tab" id="tab-services" aria-controls="s-services" data-tab="services"><span class="ic" aria-hidden="true">💬</span> Services</button>
+      <button class="tab" role="tab" id="tab-general" aria-controls="s-general" data-tab="general"><span class="ic" aria-hidden="true">⚙️</span> General</button>
     </nav>
     <div class="pane">
       <!-- APPEARANCE -->
-      <section class="section" id="s-appearance">
+      <section class="section" id="s-appearance" role="tabpanel" aria-labelledby="tab-appearance">
         <h2>Theme</h2>
         <div class="row">
           <div class="meta">
             <div class="title">Pure Black (OLED)</div>
             <div class="sub">True-black backgrounds for OLED screens. Applies on top of Messenger's Dark mode; bubbles keep their real colors.</div>
           </div>
-          <label class="switch"><input type="checkbox" id="oled"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="oled" aria-label="Pure Black OLED theme"><span class="slider"></span></label>
         </div>
         <div class="row">
           <div class="meta">
             <div class="title">Compact chat list</div>
             <div class="sub">Collapse Messenger's conversation list to an avatar-only rail.</div>
           </div>
-          <label class="switch"><input type="checkbox" id="compact"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="compact" aria-label="Compact chat list"><span class="slider"></span></label>
         </div>
         <p class="hint">Themes are tuned for Messenger today. Other services use their own dark mode for now — more theming is coming.</p>
 
@@ -139,26 +152,26 @@
         <div class="row">
           <div class="meta"><div class="title">Interface zoom</div><div class="sub">Scale the active service's web view.</div></div>
           <div class="stepper">
-            <button id="zoom-out">−</button>
-            <span class="val" id="zoom-val">90%</span>
-            <button id="zoom-in">+</button>
+            <button id="zoom-out" aria-label="Zoom out">−</button>
+            <span class="val" id="zoom-val" aria-live="polite">90%</span>
+            <button id="zoom-in" aria-label="Zoom in">+</button>
           </div>
         </div>
       </section>
 
       <!-- SERVICES -->
-      <section class="section" id="s-services">
+      <section class="section" id="s-services" role="tabpanel" aria-labelledby="tab-services">
         <h2>Messaging services</h2>
         <p class="hint">Toggle services on or off and reorder how they appear in the bottom bar. Each keeps its own independent login.</p>
         <div id="svc-list"></div>
       </section>
 
       <!-- GENERAL -->
-      <section class="section" id="s-general">
+      <section class="section" id="s-general" role="tabpanel" aria-labelledby="tab-general">
         <h2>Startup &amp; tray</h2>
         <div class="row">
           <div class="meta"><div class="title">Launch at login</div><div class="sub">Start KausApp automatically when you sign in.</div></div>
-          <label class="switch"><input type="checkbox" id="login"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="login" aria-label="Launch at login"><span class="slider"></span></label>
         </div>
 
         <h2>Updates &amp; support</h2>
@@ -171,8 +184,8 @@
         <div class="about">
           <div id="ver">KausApp</div>
           By Coders Republic —
-          <a id="site">kausapp.com</a> ·
-          <a id="notes">Release notes</a><br>
+          <a id="site" role="link" tabindex="0">kausapp.com</a> ·
+          <a id="notes" role="link" tabindex="0">Release notes</a><br>
           Not affiliated with Meta. "Messenger", "WhatsApp", "Instagram" are trademarks of Meta Platforms, Inc.
         </div>
       </section>
@@ -181,17 +194,30 @@
 
   <script>
     var STATE = null;
+    var TABS = ['appearance', 'services', 'general'];
 
     function pct(z) { return Math.round(z * 100) + '%'; }
 
     function selectTab(name) {
-      document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('active', t.dataset.tab === name); });
+      document.querySelectorAll('.tab').forEach(function (t) {
+        var on = t.dataset.tab === name;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+      });
       document.querySelectorAll('.section').forEach(function (s) { s.classList.toggle('active', s.id === 's-' + name); });
     }
 
-    document.querySelectorAll('.tab').forEach(function (t) {
+    var tabEls = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+    tabEls.forEach(function (t) {
       t.addEventListener('click', function () { selectTab(t.dataset.tab); });
+      // Arrow-key navigation across the tablist (WAI-ARIA tabs pattern).
+      t.addEventListener('keydown', function (e) {
+        var i = TABS.indexOf(t.dataset.tab);
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); var n = tabEls[(i + 1) % tabEls.length]; selectTab(n.dataset.tab); n.focus(); }
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); var p = tabEls[(i - 1 + tabEls.length) % tabEls.length]; selectTab(p.dataset.tab); p.focus(); }
+      });
     });
+
     document.getElementById('close').addEventListener('click', function () { window.settingsApi.close(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') window.settingsApi.close(); });
 
@@ -208,14 +234,18 @@
 
         var meta = document.createElement('div');
         meta.className = 'meta';
-        meta.innerHTML = '<div class="title">' + svc.name + '</div><div class="sub">' +
-          (svc.themeable ? 'Official web app · themeable' : 'Official web app') + '</div>';
+        var title = document.createElement('div'); title.className = 'title'; title.textContent = svc.name;
+        var sub = document.createElement('div'); sub.className = 'sub';
+        sub.textContent = svc.themeable ? 'Official web app · themeable' : 'Official web app';
+        meta.appendChild(title); meta.appendChild(sub);
         row.appendChild(meta);
 
         var reorder = document.createElement('div');
         reorder.className = 'reorder';
         var up = document.createElement('button'); up.textContent = '↑'; up.disabled = idx === 0;
+        up.setAttribute('aria-label', 'Move ' + svc.name + ' up');
         var dn = document.createElement('button'); dn.textContent = '↓'; dn.disabled = idx === STATE.services.length - 1;
+        dn.setAttribute('aria-label', 'Move ' + svc.name + ' down');
         up.addEventListener('click', function () { move(idx, -1); });
         dn.addEventListener('click', function () { move(idx, 1); });
         reorder.appendChild(up); reorder.appendChild(dn);
@@ -223,6 +253,7 @@
 
         var sw = document.createElement('label'); sw.className = 'switch';
         var inp = document.createElement('input'); inp.type = 'checkbox'; inp.checked = svc.enabled;
+        inp.setAttribute('aria-label', 'Enable ' + svc.name);
         inp.addEventListener('change', function () { svc.enabled = inp.checked; commitServices(); });
         var sl = document.createElement('span'); sl.className = 'slider';
         sw.appendChild(inp); sw.appendChild(sl);
@@ -276,14 +307,19 @@
     window.settingsApi.onFocusTab(function (tab) { if (tab) selectTab(tab); });
 
     (async function init() {
-      STATE = await window.settingsApi.load();
-      document.getElementById('oled').checked = STATE.settings.oledTheme;
-      document.getElementById('compact').checked = STATE.settings.compactSidebar;
-      document.getElementById('login').checked = STATE.settings.launchAtLogin;
-      document.getElementById('zoom-val').textContent = pct(STATE.settings.zoomFactor);
-      document.getElementById('ver').textContent = 'KausApp v' + STATE.version;
-      renderServices();
-      selectTab('appearance');
+      try {
+        STATE = await window.settingsApi.load();
+        document.getElementById('oled').checked = STATE.settings.oledTheme;
+        document.getElementById('compact').checked = STATE.settings.compactSidebar;
+        document.getElementById('login').checked = STATE.settings.launchAtLogin;
+        document.getElementById('zoom-val').textContent = pct(STATE.settings.zoomFactor);
+        document.getElementById('ver').textContent = 'KausApp v' + STATE.version;
+        renderServices();
+        selectTab('appearance');
+      } catch (err) {
+        document.querySelector('.pane').innerHTML =
+          '<div class="error-note">Couldn’t load settings. Close this panel and try again.</div>';
+      }
     })();
   </script>
 </body>

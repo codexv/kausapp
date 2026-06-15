@@ -649,3 +649,70 @@ WhatsApp, Instagram DMs, Telegram, Discord.
   zoom, devtools; Help keeps updates/report/diagnostics. Tray unchanged.
 - Verified: clean boot, all 5 favicons render in the bar, Messenger logged-in +
   OLED themed. NEEDS user test: switching, settings panel, the 4 new logins.
+
+---
+
+## 2026-06-16 — Code audit + cleanup pass (no new features)
+
+Ran a full audit of the v0.2.0 shell (FULL-AUDIT.md brief: correctness →
+security → completeness → a11y → perf → simplicity → design), then fixed all
+findings. Snapshot taken first: `backups/audit-fix-20260616-005214/`.
+Design reference chosen for the consistency pass: **Linear** (dark, dense, single
+accent, tight token system).
+
+**Correctness**
+- OLED double-insert race: `applyOledTheme` now serialized with an `oledApplying`
+  guard so the post-load retry interval can't insert the CSS twice while a
+  network-fetched apply is in flight. `toggleUserStyle` re-checks `isDestroyed()`
+  + slot after the await.
+- Dead unread-badge `.dot` logic removed from `shell.html`.
+- `shell:switch` restricted to `views.has(id)` (the bar only renders enabled).
+- Off-screen window guard: `visibleWindowState()` drops a saved x/y that no
+  longer lands on any connected display.
+- `ensureServiceViews` no longer calls `loadSettings()` 3× in one ternary.
+
+**Security / privacy**
+- `functions/api/report.js`: per-IP/UTC-day soft rate limit (20/day) via `rl:*`
+  KV keys (TTL 24h). `functions/api/reports.js` now lists with `prefix:'report:'`
+  so rate-limit keys never surface as reports.
+- "Send Theme Diagnostics" now shows an explicit consent dialog (screenshot +
+  on-screen text leave the device) before capture; success copy made accurate.
+- Added CSP meta to `shell.html` (allows remote favicons only) and `settings.html`.
+
+**Completeness**
+- Service load **error state**: views track `status` (loading/ready/failed);
+  `did-fail-load` (main frame, non-abort) flags failed → main process hides the
+  view (0×0) and the shell shows an error overlay with a **Retry** button
+  (`shell:reload`). `did-start-loading` clears it on retry.
+- `settings.html` `init()` wrapped in try/catch with a visible error note.
+- `report.html` textarea got `maxlength=5000` + a live counter.
+
+**Accessibility**
+- Settings tabs: real `role=tablist/tab/tabpanel`, `aria-selected`, roving
+  tabindex + arrow-key nav. Switches get a visible `:focus-visible` ring (the
+  hidden input now fills the control). Reorder buttons + toggles labelled; tab
+  emoji `aria-hidden`. Bottom-bar active service marked `aria-current`.
+
+**Performance**
+- Settings cached in memory (`settingsCache`) — no more synchronous disk read on
+  every hot-path `loadSettings()` (was firing on each title/favicon update).
+- `pushState()` debounced (50ms) to coalesce burst title/favicon events.
+
+**Simplicity / design**
+- Deleted the unused, stale `desktopMessenger` preload bridge (was `version:'0.1.0'`).
+- Collapsed the `compactRef`/`oledRef` getter/setter wrappers into a `cssKeys`
+  object. Hoisted the FB link-shim host list to one `FB_LINK_SHIMS` const.
+- Removed the duplicate "Settings…" item from the View menu.
+- Unified design tokens across shell/settings/report: single accent (#1456ff +
+  one hover), one radius system (8/10/12 + pill), 8px-grid spacing, and matched
+  the report window background to the app dark (#0a0a0c, was blue-tinted #0a0e1a).
+
+**Known debt left as-is:** OLED still keys off Meta's obfuscated composer class
+chain (`.x16sw7j7…`) — no clean fix without it; per-service theming for the 4
+non-Messenger apps still pending.
+
+Verified: `node --check` on all JS clean; no stale refs; dev build boots (via an
+isolated `--user-data-dir`, since the installed app holds the single-instance
+lock) and renders the bar + a service view with no JS errors. Shipped as
+**v0.2.1** (committed + tagged; CI release build) and the Cloudflare functions
+redeployed for the report rate limit.

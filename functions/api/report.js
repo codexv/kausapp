@@ -24,6 +24,18 @@ export async function onRequestPost(context) {
   const description = String((data && data.description) || '').trim().slice(0, 5000);
   if (!description) return json({ ok: false, error: 'empty_description' }, 400);
 
+  // Lightweight abuse guard: cap submissions per IP per UTC day. KV is eventually
+  // consistent so this is a soft limit, but it stops a single client from
+  // flooding the namespace. No-op if the IP header is absent.
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  if (ip) {
+    const day = new Date().toISOString().slice(0, 10);
+    const rlKey = `rl:${day}:${ip}`;
+    const count = parseInt((await env.REPORTS.get(rlKey)) || '0', 10) || 0;
+    if (count >= 20) return json({ ok: false, error: 'rate_limited' }, 429);
+    await env.REPORTS.put(rlKey, String(count + 1), { expirationTtl: 86400 });
+  }
+
   // Cap screenshot size (~6MB data URL) to stay well under KV's value limit.
   let screenshot = typeof data.screenshot === 'string' ? data.screenshot : '';
   if (screenshot && (!screenshot.startsWith('data:image/') || screenshot.length > 6_000_000)) {

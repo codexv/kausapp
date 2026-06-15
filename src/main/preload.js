@@ -1,14 +1,8 @@
 'use strict';
 
-// The preload runs in an isolated context with access to a limited Node API.
-// For now we keep the page untouched (messenger.com is a full SPA), but this is
-// the seam where we can later inject UX niceties: unread-count badges, custom
-// notification handling, theme tweaks, keyboard shortcuts, etc.
-
-const { contextBridge } = require('electron');
-
-// Expose a minimal, namespaced API instead of leaking Node into the page.
-contextBridge.exposeInMainWorld('desktopMessenger', {
-  version: '0.1.0',
-  platform: process.platform
-});
+// Preload for the service web views (messenger.com, web.whatsapp.com, …).
+//
+// Intentionally empty: the services are full SPAs we render untouched, and
+// nothing in those pages consumes a bridge today. This file is kept as the seam
+// where per-page niceties (custom notifications, keyboard shortcuts, theme
+// hooks) would be wired via contextBridge.exposeInMainWorld when needed.

@@ -9,10 +9,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0a0e1a; color: #fff; padding: 22px; height: 100vh;
+      background: #0a0a0c; color: #fff; padding: 22px; height: 100vh;
       display: flex; flex-direction: column;
     }
-    h1 { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+    h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .label-row { display: flex; align-items: baseline; justify-content: space-between; }
+    .counter { font-size: 11px; color: #7d8db0; font-weight: 500; }
     p.sub { font-size: 12.5px; color: #9fb3d8; margin-bottom: 16px; }
     label { font-size: 12px; font-weight: 600; color: #cfe0ff; display: block; margin-bottom: 6px; }
     textarea {
@@ -46,8 +48,11 @@
   <h1>Report a Bug</h1>
   <p class="sub">Tell us what went wrong. A screenshot of the app is attached automatically.</p>
 
-  <label for="desc">What happened?</label>
-  <textarea id="desc" placeholder="Describe the bug, what you expected, and the steps to reproduce it…" autofocus></textarea>
+  <div class="label-row">
+    <label for="desc">What happened?</label>
+    <span class="counter" id="counter">0 / 5000</span>
+  </div>
+  <textarea id="desc" maxlength="5000" placeholder="Describe the bug, what you expected, and the steps to reproduce it…" autofocus></textarea>
 
   <div class="shot">
     <div class="shot-row">
@@ -81,6 +86,12 @@
 
     incShot.addEventListener('change', function () {
       preview.style.opacity = incShot.checked ? '1' : '0.3';
+    });
+
+    var descEl = document.getElementById('desc');
+    var counterEl = document.getElementById('counter');
+    descEl.addEventListener('input', function () {
+      counterEl.textContent = descEl.value.length + ' / 5000';
     });
 
     document.getElementById('cancel').addEventListener('click', function () {

@@ -3,18 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Local chrome: no scripts/styles from anywhere but inline; remote images
+       are only the services' favicons. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
   <title>KausApp</title>
   <style>
     :root {
       --bar-h: 56px;
-      --bg: #000;
-      --bar-bg: #0a0a0c;
-      --bar-border: rgba(255, 255, 255, 0.08);
+      --bg: #0a0a0c;
+      --bar-bg: #0d0d10;
+      --surface: #141417;
+      --border: rgba(255, 255, 255, 0.08);
       --icon-idle: rgba(255, 255, 255, 0.62);
-      --icon-hover: rgba(255, 255, 255, 0.12);
+      --hover: rgba(255, 255, 255, 0.10);
       --accent: #1456ff;
+      --accent-soft: rgba(20, 86, 255, 0.16);
       --badge: #ff3b30;
       --text: #e8eefc;
+      --muted: rgba(255, 255, 255, 0.55);
+      /* Radius system: small / medium / large + pill. */
+      --r-sm: 8px;
+      --r-md: 10px;
+      --r-lg: 12px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
     html, body { height: 100%; background: var(--bg); overflow: hidden;
@@ -23,10 +34,10 @@
     /* The service web views cover everything above this bar; only the bar shows. */
     .bar {
       position: fixed; left: 0; right: 0; bottom: 0; height: var(--bar-h);
-      display: flex; align-items: center; gap: 6px;
-      padding: 0 10px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 8px;
       background: var(--bar-bg);
-      border-top: 1px solid var(--bar-border);
+      border-top: 1px solid var(--border);
       -webkit-app-region: drag; /* let users drag the window by the empty bar */
     }
     .services { display: flex; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
@@ -35,25 +46,26 @@
 
     .btn {
       position: relative;
-      width: 44px; height: 44px; border-radius: 12px; border: none;
+      width: 44px; height: 44px; border-radius: var(--r-lg); border: none;
       background: transparent; cursor: pointer; color: var(--icon-idle);
       display: flex; align-items: center; justify-content: center;
       transition: background 0.13s ease, color 0.13s ease, transform 0.1s ease;
     }
-    .btn:hover { background: var(--icon-hover); color: #fff; }
+    .btn:hover { background: var(--hover); color: #fff; }
     .btn:active { transform: scale(0.94); }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     /* Active service: subtle pill + accent underline. */
-    .btn.active { background: rgba(20, 86, 255, 0.16); color: #fff; }
+    .btn.active { background: var(--accent-soft); color: #fff; }
     .btn.active::after {
       content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
       width: 16px; height: 2.5px; border-radius: 2px; background: var(--accent);
     }
 
-    .ico { width: 24px; height: 24px; border-radius: 6px; object-fit: cover; pointer-events: none; }
+    .ico { width: 24px; height: 24px; border-radius: var(--r-sm); object-fit: cover; pointer-events: none; }
     /* Fallback monogram chip when a favicon hasn't loaded yet. */
     .chip {
-      width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700; color: #fff; pointer-events: none;
     }
 
@@ -64,9 +76,8 @@
       display: flex; align-items: center; justify-content: center; line-height: 1;
       box-shadow: 0 0 0 2px var(--bar-bg); pointer-events: none;
     }
-    .badge.dot { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 7px; right: 8px; }
 
-    .sep { width: 1px; height: 26px; background: var(--bar-border); margin: 0 4px; -webkit-app-region: no-drag; }
+    .sep { width: 1px; height: 26px; background: var(--border); margin: 0 4px; -webkit-app-region: no-drag; }
 
     .glyph { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -74,12 +85,42 @@
     .btn[data-tip]:hover::before {
       content: attr(data-tip);
       position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-      background: #1c1c1f; color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap;
-      padding: 5px 9px; border-radius: 7px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); pointer-events: none;
+      background: var(--surface); color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap;
+      padding: 6px 10px; border-radius: var(--r-sm); box-shadow: 0 6px 18px rgba(0,0,0,0.5); pointer-events: none;
     }
+
+    /* Error overlay — shown when the active service's main frame failed to load.
+       The failed web view is sized 0×0 by the main process, so this shows through. */
+    #overlay {
+      position: fixed; left: 0; right: 0; top: 0; bottom: var(--bar-h);
+      display: none; align-items: center; justify-content: center; padding: 24px;
+      background: var(--bg); text-align: center;
+    }
+    #overlay.show { display: flex; }
+    .err { max-width: 360px; }
+    .err .dot { width: 44px; height: 44px; margin: 0 auto 16px; border-radius: 999px;
+      background: var(--accent-soft); display: flex; align-items: center; justify-content: center; }
+    .err .dot svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; }
+    .err h2 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .err p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
+    .retry {
+      font-family: inherit; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer;
+      background: var(--accent); border: none; border-radius: var(--r-md); padding: 10px 20px;
+    }
+    .retry:hover { background: #2f6bff; }
+    .retry:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   </style>
 </head>
 <body>
+  <div id="overlay" role="alert">
+    <div class="err">
+      <div class="dot"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.01"/><circle cx="12" cy="12" r="9"/></svg></div>
+      <h2 id="err-title">Couldn’t load this service</h2>
+      <p id="err-detail">Check your connection and try again.</p>
+      <button class="retry" id="retry">Retry</button>
+    </div>
+  </div>
+
   <nav class="bar">
     <div class="services" id="services"></div>
     <div class="spacer"></div>
@@ -96,39 +137,11 @@
 
   <script>
     var servicesEl = document.getElementById('services');
+    var overlay = document.getElementById('overlay');
+    var errTitle = document.getElementById('err-title');
+    var errDetail = document.getElementById('err-detail');
 
     function initial(name) { return (name || '?').trim().charAt(0).toUpperCase(); }
-
-    function render(state) {
-      var list = (state && state.services) || [];
-      servicesEl.innerHTML = '';
-      list.forEach(function (svc) {
-        var btn = document.createElement('button');
-        btn.className = 'btn' + (svc.active ? ' active' : '');
-        btn.setAttribute('data-tip', svc.name);
-        btn.setAttribute('aria-label', svc.name);
-
-        if (svc.favicon) {
-          var img = document.createElement('img');
-          img.className = 'ico';
-          img.src = svc.favicon;
-          img.onerror = function () { btn.replaceChild(makeChip(svc), img); };
-          btn.appendChild(img);
-        } else {
-          btn.appendChild(makeChip(svc));
-        }
-
-        if (svc.unread > 0) {
-          var b = document.createElement('span');
-          b.className = 'badge' + (svc.unread > 9 ? '' : (svc.unread >= 1 ? '' : ' dot'));
-          b.textContent = svc.unread > 99 ? '99+' : String(svc.unread);
-          btn.appendChild(b);
-        }
-
-        btn.addEventListener('click', function () { window.shell.switchTo(svc.id); });
-        servicesEl.appendChild(btn);
-      });
-    }
 
     function makeChip(svc) {
       var chip = document.createElement('span');
@@ -138,8 +151,51 @@
       return chip;
     }
 
+    function render(state) {
+      var list = (state && state.services) || [];
+      servicesEl.innerHTML = '';
+      list.forEach(function (svc) {
+        var btn = document.createElement('button');
+        btn.className = 'btn' + (svc.active ? ' active' : '');
+        btn.setAttribute('data-tip', svc.name);
+        btn.setAttribute('aria-label', svc.name);
+        if (svc.active) btn.setAttribute('aria-current', 'true');
+
+        if (svc.favicon) {
+          var img = document.createElement('img');
+          img.className = 'ico';
+          img.src = svc.favicon;
+          img.alt = '';
+          img.onerror = function () { btn.replaceChild(makeChip(svc), img); };
+          btn.appendChild(img);
+        } else {
+          btn.appendChild(makeChip(svc));
+        }
+
+        if (svc.unread > 0) {
+          var b = document.createElement('span');
+          b.className = 'badge';
+          b.textContent = svc.unread > 99 ? '99+' : String(svc.unread);
+          btn.appendChild(b);
+        }
+
+        btn.addEventListener('click', function () { window.shell.switchTo(svc.id); });
+        servicesEl.appendChild(btn);
+      });
+
+      // Error overlay for the active service.
+      if (state && state.activeStatus === 'failed') {
+        errTitle.textContent = 'Couldn’t load ' + (state.activeName || 'this service');
+        errDetail.textContent = (state.activeError ? state.activeError + '. ' : '') + 'Check your connection and try again.';
+        overlay.classList.add('show');
+      } else {
+        overlay.classList.remove('show');
+      }
+    }
+
     document.getElementById('add').addEventListener('click', function () { window.shell.addService(); });
     document.getElementById('settings').addEventListener('click', function () { window.shell.openSettings('appearance'); });
+    document.getElementById('retry').addEventListener('click', function () { window.shell.reload(); });
 
     window.shell.onState(render);
     window.shell.ready();

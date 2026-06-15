@@ -11,6 +11,7 @@ const {
   session,
   dialog,
   ipcMain,
+  screen,
   net
 } = require('electron');
 const path = require('node:path');
@@ -116,20 +117,28 @@ let settingsView = null;
 // ---------------------------------------------------------------------------
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 
+// In-memory cache. settings.json is written only by this process, so a cache is
+// safe and avoids a synchronous disk read on every hot-path call (pushState →
+// orderedEnabledServices → loadSettings fires on each title/favicon update).
+let settingsCache = null;
+
 function loadSettings() {
+  if (settingsCache) return settingsCache;
   try {
-    return JSON.parse(fs.readFileSync(settingsFile(), 'utf8'));
+    settingsCache = JSON.parse(fs.readFileSync(settingsFile(), 'utf8'));
   } catch {
-    return {};
+    settingsCache = {};
   }
+  return settingsCache;
 }
 
 function saveSettings(patch) {
+  const next = { ...loadSettings(), ...patch };
+  settingsCache = next;
   try {
-    const next = { ...loadSettings(), ...patch };
     fs.writeFileSync(settingsFile(), JSON.stringify(next));
   } catch {
-    /* best-effort */
+    /* best-effort — keep the in-memory value even if the write fails */
   }
 }
 
@@ -161,8 +170,12 @@ function orderedEnabledServices() {
 // ---------------------------------------------------------------------------
 const COMPACT_CSS_PATH = path.join(__dirname, 'userstyle-compact.css');
 const OLED_CSS_PATH = path.join(__dirname, 'userstyle-oled.css');
-let compactCssKey = null; // insertCSS handle on the messenger view
-let oledCssKey = null;
+// insertCSS handles on the messenger view (null = not inserted). Invalidated on
+// every page load — see did-finish-load.
+const cssKeys = { compact: null, oled: null };
+// Serializes OLED applies so the post-load retry interval can't double-insert
+// while a previous (network-fetched) apply is still in flight.
+let oledApplying = false;
 
 const REMOTE_STYLE = {
   compact: 'https://kausapp.com/styles/compact.css',
@@ -196,26 +209,26 @@ function activeWc() {
   return e ? e.view.webContents : null;
 }
 
-async function toggleUserStyle(wc, name, cssPath, keyRef, enable) {
+async function toggleUserStyle(wc, name, cssPath, slot, enable) {
   if (!wc || wc.isDestroyed()) return;
   try {
-    if (enable && keyRef.value === null) {
+    if (enable && cssKeys[slot] === null) {
       const css = await loadStyleCss(name, cssPath);
-      if (css) keyRef.value = await wc.insertCSS(css);
-    } else if (!enable && keyRef.value !== null) {
-      await wc.removeInsertedCSS(keyRef.value);
-      keyRef.value = null;
+      // Re-check after the await: a destroy/load could have raced the fetch.
+      if (css && !wc.isDestroyed() && cssKeys[slot] === null) {
+        cssKeys[slot] = await wc.insertCSS(css);
+      }
+    } else if (!enable && cssKeys[slot] !== null) {
+      await wc.removeInsertedCSS(cssKeys[slot]);
+      cssKeys[slot] = null;
     }
   } catch {
     /* best-effort — page may not be ready */
   }
 }
 
-const compactRef = { get value() { return compactCssKey; }, set value(v) { compactCssKey = v; } };
-const oledRef = { get value() { return oledCssKey; }, set value(v) { oledCssKey = v; } };
-
 function applyCompactSidebar(enable) {
-  return toggleUserStyle(messengerWc(), 'compact', COMPACT_CSS_PATH, compactRef, enable);
+  return toggleUserStyle(messengerWc(), 'compact', COMPACT_CSS_PATH, 'compact', enable);
 }
 
 // Is the Messenger page currently in DARK mode? (low body-background luminance).
@@ -233,8 +246,10 @@ async function pageIsDark() {
 }
 
 async function applyOledTheme(enable, userInitiated = false) {
-  if (enable) {
-    if (!(await pageIsDark())) {
+  if (oledApplying) return; // an apply is already in flight — don't double-insert
+  oledApplying = true;
+  try {
+    if (enable && !(await pageIsDark())) {
       if (userInitiated && mainWindow) {
         dialog.showMessageBox(mainWindow, {
           type: 'info',
@@ -246,8 +261,10 @@ async function applyOledTheme(enable, userInitiated = false) {
       }
       return; // never black out a light page
     }
+    await toggleUserStyle(messengerWc(), 'oled', OLED_CSS_PATH, 'oled', enable);
+  } finally {
+    oledApplying = false;
   }
-  return toggleUserStyle(messengerWc(), 'oled', OLED_CSS_PATH, oledRef, enable);
 }
 
 // ---------------------------------------------------------------------------
@@ -272,16 +289,31 @@ function saveWindowState() {
   }
 }
 
+// Drop a saved x/y that no longer lands on any connected display (e.g. an
+// external monitor was unplugged), so the window can't open fully off-screen.
+function visibleWindowState() {
+  const state = loadWindowState();
+  if (typeof state.x !== 'number' || typeof state.y !== 'number') return state;
+  const onScreen = screen.getAllDisplays().some((d) => {
+    const wa = d.workArea;
+    return state.x < wa.x + wa.width && state.x + 80 > wa.x &&
+           state.y < wa.y + wa.height && state.y + 40 > wa.y;
+  });
+  return onScreen ? state : { width: state.width, height: state.height };
+}
+
 // ---------------------------------------------------------------------------
 // External-link handling — anything outside the active service opens in the
 // user's default browser instead of a bare in-app window.
 // ---------------------------------------------------------------------------
 // Facebook/Messenger route outbound links through redirector shims
 // (l.facebook.com / lm.facebook.com / l.messenger.com / l.php?u=<encoded>).
+const FB_LINK_SHIMS = ['l.facebook.com', 'lm.facebook.com', 'l.messenger.com', 'lm.messenger.com'];
+
 function unwrapFbLink(url) {
   try {
     const u = new URL(url);
-    if (['l.facebook.com', 'lm.facebook.com', 'l.messenger.com', 'lm.messenger.com'].includes(u.hostname)) {
+    if (FB_LINK_SHIMS.includes(u.hostname)) {
       const real = u.searchParams.get('u');
       if (real) return real;
     }
@@ -298,7 +330,7 @@ function baseDomain(hostname) {
 function isInternalToService(svc, url) {
   try {
     const { hostname } = new URL(url);
-    if (['l.facebook.com', 'lm.facebook.com', 'l.messenger.com', 'lm.messenger.com'].includes(hostname)) {
+    if (FB_LINK_SHIMS.includes(hostname)) {
       return false; // link-redirector shims are always outbound
     }
     const home = baseDomain(new URL(svc.url).hostname);
@@ -377,7 +409,8 @@ function makeServiceView(svc) {
     }
   });
 
-  const entry = { view, svc, favicon: null, unread: 0 };
+  // status: 'loading' | 'ready' | 'failed' — drives the shell's error overlay.
+  const entry = { view, svc, favicon: null, unread: 0, status: 'loading', failDesc: '' };
   views.set(svc.id, entry);
 
   wc.on('page-title-updated', (e, title) => {
@@ -388,20 +421,36 @@ function makeServiceView(svc) {
     if (favicons && favicons.length) { entry.favicon = favicons[0]; pushState(); }
   });
 
+  // A (re)load is starting — clear any prior failure so the view becomes visible.
+  wc.on('did-start-loading', () => {
+    if (entry.status === 'failed') { entry.status = 'loading'; layout(); pushState(); }
+  });
+
+  // Main-frame load failure (network down, blocked, DNS). -3 is a user/SPA abort.
+  wc.on('did-fail-load', (e, errorCode, errorDescription, _url, isMainFrame) => {
+    if (isMainFrame && errorCode !== -3) {
+      entry.status = 'failed';
+      entry.failDesc = errorDescription || `error ${errorCode}`;
+      layout();
+      pushState();
+    }
+  });
+
   wc.on('did-finish-load', () => {
+    entry.status = 'ready';
     const s = loadSettings();
     wc.setZoomFactor(typeof s.zoomFactor === 'number' ? s.zoomFactor : DEFAULT_ZOOM);
 
     if (svc.themeable) {
-      compactCssKey = null; // inserted-CSS handles are invalid after a load
-      oledCssKey = null;
+      cssKeys.compact = null; // inserted-CSS handles are invalid after a load
+      cssKeys.oled = null;
       if (s.compactSidebar) applyCompactSidebar(true);
       if (s.oledTheme) {
         // Dark styling can settle after load (SPA); a fresh launch may show the
         // light login page first. Retry the dark-guarded apply briefly.
         let tries = 0;
         const t = setInterval(() => {
-          if (oledCssKey !== null || ++tries > 8 || !views.get('messenger') || !loadSettings().oledTheme) {
+          if (cssKeys.oled !== null || ++tries > 8 || !views.get('messenger') || !loadSettings().oledTheme) {
             clearInterval(t);
             return;
           }
@@ -409,6 +458,8 @@ function makeServiceView(svc) {
         }, 800);
       }
     }
+    layout();
+    pushState();
   });
 
   return entry;
@@ -434,9 +485,8 @@ function ensureServiceViews() {
   }
   // Make sure something valid is active.
   if (!activeId || !views.has(activeId)) {
-    setActive((loadSettings().activeService && views.has(loadSettings().activeService))
-      ? loadSettings().activeService
-      : wanted[0].id);
+    const saved = loadSettings().activeService;
+    setActive(saved && views.has(saved) ? saved : wanted[0].id);
   } else {
     layout();
     pushState();
@@ -467,7 +517,9 @@ function layout() {
   const [w, h] = mainWindow.getContentSize();
   const contentH = Math.max(0, h - BAR_HEIGHT);
   for (const [id, entry] of views) {
-    if (id === activeId && !settingsView) {
+    // Active view fills the content area — unless it failed to load, where we
+    // hide it (0×0) so the shell's error overlay shows through underneath.
+    if (id === activeId && !settingsView && entry.status !== 'failed') {
       entry.view.setBounds({ x: 0, y: 0, width: w, height: contentH });
     } else {
       entry.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
@@ -477,8 +529,16 @@ function layout() {
 }
 
 // Push the bottom-bar state (services, badges, active) to the shell renderer.
+// Debounced: page-title/favicon events can fire in bursts during activity.
+let pushTimer = null;
 function pushState() {
+  if (pushTimer) return;
+  pushTimer = setTimeout(() => { pushTimer = null; doPushState(); }, 50);
+}
+
+function doPushState() {
   if (!mainWindow || mainWindow.webContents.isDestroyed()) return;
+  const active = activeId && views.get(activeId);
   const payload = {
     services: orderedEnabledServices().map((svc) => {
       const e = views.get(svc.id);
@@ -491,7 +551,11 @@ function pushState() {
         active: svc.id === activeId && !settingsView
       };
     }),
-    settingsOpen: !!settingsView
+    settingsOpen: !!settingsView,
+    // Error overlay for the active service when its main frame failed to load.
+    activeStatus: active ? active.status : 'loading',
+    activeName: active ? active.svc.name : '',
+    activeError: active && active.status === 'failed' ? active.failDesc : ''
   };
   mainWindow.webContents.send('shell:state', payload);
 }
@@ -535,7 +599,7 @@ function closeSettings() {
 // views sit on top of it, covering everything except the bottom strip.
 // ---------------------------------------------------------------------------
 function createWindow() {
-  const state = loadWindowState();
+  const state = visibleWindowState();
 
   mainWindow = new BrowserWindow({
     width: state.width,
@@ -627,8 +691,6 @@ function buildMenu() {
     {
       label: 'View',
       submenu: [
-        { label: 'Settings…', click: () => openSettings('appearance') },
-        { type: 'separator' },
         {
           label: 'Compact chat list (icons only)',
           type: 'checkbox',
@@ -806,6 +868,19 @@ const THEME_DIAG_SCRIPT = `(() => {
 
 async function sendThemeDiagnostics() {
   if (!mainWindow) return;
+
+  // Explicit consent: this leaves the device with on-screen text + a screenshot.
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    buttons: ['Send diagnostics', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+    title: 'Send theme diagnostics?',
+    message: 'This sends a screenshot of the current view plus on-screen text snippets to KausApp.',
+    detail: 'Used only to fix theming. It includes visible message text and contact names from the active service. Don’t send if sensitive information is on screen.'
+  });
+  if (response !== 0) return;
+
   const wc = activeWc();
   let diag;
   try {
@@ -836,7 +911,7 @@ async function sendThemeDiagnostics() {
     if (res.ok && data.ok) {
       dialog.showMessageBox(mainWindow, {
         type: 'info', title: 'Diagnostics sent', message: 'Theme diagnostics sent — thank you!',
-        detail: 'KausApp captured the conversation colors automatically and sent them. No console needed.'
+        detail: 'KausApp captured the active view’s colors, text snippets, and a screenshot, and sent them. No console needed.'
       });
     } else {
       throw new Error(data.error || `HTTP ${res.status}`);
@@ -854,7 +929,9 @@ async function sendThemeDiagnostics() {
 // ---------------------------------------------------------------------------
 function registerShellIpc() {
   ipcMain.on('shell:ready', () => pushState());
-  ipcMain.on('shell:switch', (e, id) => { if (id && (views.has(id) || SERVICES.some((s) => s.id === id))) setActive(id); });
+  // The bar only renders enabled services, so a valid switch always has a view.
+  ipcMain.on('shell:switch', (e, id) => { if (id && views.has(id)) setActive(id); });
+  ipcMain.on('shell:reload', () => { const wc = activeWc(); if (wc && !wc.isDestroyed()) wc.reload(); });
   ipcMain.on('shell:open-settings', (e, tab) => openSettings(tab));
 
   ipcMain.handle('settings:load', () => {
