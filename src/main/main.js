@@ -28,6 +28,11 @@ const DEFAULT_ZOOM = 0.9;
 // Height of the bottom service bar (the app chrome strip beneath the web views).
 const BAR_HEIGHT = 56;
 
+// Height of the custom (frameless) title bar at the very top. The window uses a
+// hidden native title bar so this strip can be painted pure black; the OS window
+// controls (mac traffic lights / Win+Linux overlay) are positioned within it.
+const TOP_BAR = 36;
+
 // electron-context-menu is ESM-only (v4+), so it's loaded via dynamic import()
 // inside app.whenReady() rather than a top-level require.
 
@@ -515,17 +520,18 @@ function setActive(id) {
 function layout() {
   if (!mainWindow) return;
   const [w, h] = mainWindow.getContentSize();
-  const contentH = Math.max(0, h - BAR_HEIGHT);
+  // Content sits between the top title bar and the bottom service bar.
+  const contentH = Math.max(0, h - TOP_BAR - BAR_HEIGHT);
   for (const [id, entry] of views) {
     // Active view fills the content area — unless it failed to load, where we
     // hide it (0×0) so the shell's error overlay shows through underneath.
     if (id === activeId && !settingsView && entry.status !== 'failed') {
-      entry.view.setBounds({ x: 0, y: 0, width: w, height: contentH });
+      entry.view.setBounds({ x: 0, y: TOP_BAR, width: w, height: contentH });
     } else {
       entry.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
     }
   }
-  if (settingsView) settingsView.setBounds({ x: 0, y: 0, width: w, height: contentH });
+  if (settingsView) settingsView.setBounds({ x: 0, y: TOP_BAR, width: w, height: contentH });
 }
 
 // Push the bottom-bar state (services, badges, active) to the shell renderer.
@@ -611,6 +617,12 @@ function createWindow() {
     title: 'KausApp',
     icon: resolveIcon(),
     backgroundColor: '#000000',
+    // Hidden native title bar → our own pure-black strip at the top. Keep the OS
+    // window controls: traffic lights on macOS, a black overlay on Windows/Linux.
+    titleBarStyle: 'hidden',
+    ...(process.platform === 'darwin'
+      ? { trafficLightPosition: { x: 12, y: 11 } }
+      : { titleBarOverlay: { color: '#000000', symbolColor: '#e8eefc', height: TOP_BAR } }),
     webPreferences: {
       preload: path.join(__dirname, 'shell-preload.js'),
       contextIsolation: true,

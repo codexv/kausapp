@@ -11,8 +11,9 @@
   <style>
     :root {
       --bar-h: 56px;
+      --top-h: 36px;
       --bg: #0a0a0c;
-      --bar-bg: #0d0d10;
+      --bar-bg: #000;
       --surface: #141417;
       --border: rgba(255, 255, 255, 0.08);
       --icon-idle: rgba(255, 255, 255, 0.62);
@@ -31,7 +32,21 @@
     html, body { height: 100%; background: var(--bg); overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text); }
 
-    /* The service web views cover everything above this bar; only the bar shows. */
+    /* Pure-black custom title bar. The native title bar is hidden; the OS window
+       controls (mac traffic lights / Win+Linux overlay) float within this strip.
+       The whole strip is draggable so the window can be moved by it. */
+    .titlebar {
+      position: fixed; left: 0; right: 0; top: 0; height: var(--top-h);
+      display: flex; align-items: center; justify-content: center;
+      background: #000; border-bottom: 1px solid var(--border);
+      -webkit-app-region: drag;
+    }
+    .titlebar .title {
+      font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.01em;
+      pointer-events: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* The service web views cover everything between the bars; only the bars show. */
     .bar {
       position: fixed; left: 0; right: 0; bottom: 0; height: var(--bar-h);
       display: flex; align-items: center; gap: 8px;
@@ -92,7 +107,7 @@
     /* Error overlay — shown when the active service's main frame failed to load.
        The failed web view is sized 0×0 by the main process, so this shows through. */
     #overlay {
-      position: fixed; left: 0; right: 0; top: 0; bottom: var(--bar-h);
+      position: fixed; left: 0; right: 0; top: var(--top-h); bottom: var(--bar-h);
       display: none; align-items: center; justify-content: center; padding: 24px;
       background: var(--bg); text-align: center;
     }
@@ -112,6 +127,8 @@
   </style>
 </head>
 <body>
+  <div class="titlebar"><span class="title" id="title">KausApp</span></div>
+
   <div id="overlay" role="alert">
     <div class="err">
       <div class="dot"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.01"/><circle cx="12" cy="12" r="9"/></svg></div>
@@ -140,6 +157,7 @@
     var overlay = document.getElementById('overlay');
     var errTitle = document.getElementById('err-title');
     var errDetail = document.getElementById('err-detail');
+    var titleEl = document.getElementById('title');
 
     function initial(name) { return (name || '?').trim().charAt(0).toUpperCase(); }
 
@@ -152,6 +170,7 @@
     }
 
     function render(state) {
+      titleEl.textContent = (state && state.activeName) || 'KausApp';
       var list = (state && state.services) || [];
       servicesEl.innerHTML = '';
       list.forEach(function (svc) {

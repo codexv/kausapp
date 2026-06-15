@@ -716,3 +716,22 @@ isolated `--user-data-dir`, since the installed app holds the single-instance
 lock) and renders the bar + a service view with no JS errors. Shipped as
 **v0.2.1** (committed + tagged; CI release build) and the Cloudflare functions
 redeployed for the report rate limit.
+
+---
+
+## 2026-06-16 — Pure-black bars + frameless title bar → v0.2.2
+
+User request: bottom bar pure black, plus a pure-black title bar at the very top.
+
+- `main.js`: window now uses `titleBarStyle: 'hidden'` so the native gray title
+  bar is gone. macOS keeps traffic lights (`trafficLightPosition {x:12,y:11}`);
+  Windows/Linux get a black `titleBarOverlay` (symbolColor #e8eefc, height 36).
+  New `TOP_BAR = 36`; `layout()` offsets all service/settings views to start at
+  y=TOP_BAR with height `h - TOP_BAR - BAR_HEIGHT`.
+- `shell.html`: bottom bar `--bar-bg` → `#000` (was #0d0d10); added a fixed
+  `.titlebar` strip (pure black, draggable, bottom hairline border) showing the
+  active service name centered (muted). Error overlay top offset to `--top-h`.
+- Verified: `node --check` clean; dev build (isolated user-data-dir) boots,
+  renders the black top strip with the centered service name and the offset
+  content view, no JS errors. Bundled change → ships via app release only (no
+  Cloudflare deploy).
