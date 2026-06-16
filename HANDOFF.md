@@ -765,3 +765,33 @@ User request: bottom bar pure black, plus a pure-black title bar at the very top
 - **Switching services needed two clicks — fixed.** Added `acceptFirstMouse:true`
   to the BrowserWindow. When a service WebContentsView held focus, AppKit ate the
   first click on the bottom bar (first-responder transfer); now that click counts.
+
+---
+
+## 2026-06-16 — Per-service OLED; Discord theme added → v0.2.5
+
+Generalized OLED theming from Messenger-only to per-service, and added Discord
+as the second themeable service (user request: extend OLED, one at a time).
+
+- `main.js` theming refactor:
+  - `cssKeys` is now a dynamic slot map; OLED slots are `oled:<serviceId>`,
+    compact stays `compact` (messenger only). `oledApplying` is per-service.
+  - `pageIsDark(wc)` takes a webContents (was messenger-only).
+  - New `applyOledToService(svc, enable, userInitiated)` injects that service's
+    own stylesheet; `applyOledTheme()` fans out to every themeable+enabled view.
+    The "turn on dark mode" hint is messenger-only (others are always dark).
+  - did-finish-load applies per-service OLED with the same SPA retry loop, keyed
+    by `oled:<id>`; compact reset scoped to messenger.
+  - SERVICES: `oledRemote` per themeable service → messenger `oled`, discord
+    `oled-discord`. `REMOTE_STYLE['oled-discord']` added. Removed dead OLED_CSS_PATH.
+- `userstyle-oled-discord.css` (+ hosted `site/styles/oled-discord.css`):
+  backgrounds-only override of Discord's tokens — both the 2024 visual-refresh
+  (`--bg-base-*`, `--bg-surface-*`) and legacy (`--background-*`) systems — to a
+  true-black/near-black tier set, plus `[class*="appMount"]` → #000. Never touches
+  text/role/status colors.
+- Verified out-of-band: injecting the css on live Discord flipped appMount/body
+  from oklab(0.183) → rgb(0,0,0). Full app boots on Discord with OLED on, no
+  errors. NOTE: inner-panel tiers (sidebars/chat) only resolve when logged in
+  (token chunk loads post-login) — needs user verification on their session to
+  fine-tune the tiers. Hosted css → future tweaks need no app release.
+- settings.html hint updated: "OLED is tuned for Messenger and Discord."

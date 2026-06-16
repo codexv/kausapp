@@ -56,6 +56,7 @@ const SERVICES = [
     url: 'https://www.messenger.com/',
     color: '#0a7cff',
     themeable: true,
+    oledRemote: 'oled', // REMOTE_STYLE key + bundled userstyle-oled.css
     extra: ['facebook.com', 'fbcdn.net', 'fbsbx.com']
   },
   {
@@ -84,6 +85,8 @@ const SERVICES = [
     name: 'Discord',
     url: 'https://discord.com/app',
     color: '#5865f2',
+    themeable: true,
+    oledRemote: 'oled-discord', // REMOTE_STYLE key + bundled userstyle-oled-discord.css
     extra: ['discordapp.com', 'discordapp.net', 'discord.gg']
   }
 ];
@@ -175,17 +178,18 @@ function orderedEnabledServices() {
 // bundled copy when offline. These are tuned for Messenger's DOM (themeable).
 // ---------------------------------------------------------------------------
 const COMPACT_CSS_PATH = path.join(__dirname, 'userstyle-compact.css');
-const OLED_CSS_PATH = path.join(__dirname, 'userstyle-oled.css');
-// insertCSS handles on the messenger view (null = not inserted). Invalidated on
-// every page load — see did-finish-load.
-const cssKeys = { compact: null, oled: null };
-// Serializes OLED applies so the post-load retry interval can't double-insert
-// while a previous (network-fetched) apply is still in flight.
-let oledApplying = false;
+// insertCSS handles keyed by slot (null/undefined = not inserted). Slots:
+// 'compact' (messenger), and 'oled:<serviceId>' per themeable service. Handles
+// are invalidated on every page load — see did-finish-load.
+const cssKeys = {};
+// Serializes OLED applies per service so a service's post-load retry interval
+// can't double-insert while a previous (network-fetched) apply is in flight.
+const oledApplying = {};
 
 const REMOTE_STYLE = {
   compact: 'https://kausapp.com/styles/compact.css',
-  oled: 'https://kausapp.com/styles/oled.css'
+  oled: 'https://kausapp.com/styles/oled.css',
+  'oled-discord': 'https://kausapp.com/styles/oled-discord.css'
 };
 
 async function loadStyleCss(name, localPath) {
@@ -237,11 +241,10 @@ function applyCompactSidebar(enable) {
   return toggleUserStyle(messengerWc(), 'compact', COMPACT_CSS_PATH, 'compact', enable);
 }
 
-// Is the Messenger page currently in DARK mode? (low body-background luminance).
-// OLED forces backgrounds black; on a LIGHT page that turns dark text invisible
-// (a "black window"), so we only ever apply OLED when the page is already dark.
-async function pageIsDark() {
-  const wc = messengerWc();
+// Is this page currently in DARK mode? (low body-background luminance.) OLED
+// forces backgrounds black; on a LIGHT page that turns dark text invisible (a
+// "black window"), so we only ever apply OLED when the page is already dark.
+async function pageIsDark(wc) {
   if (!wc || wc.isDestroyed()) return false;
   try {
     return !!(await wc.executeJavaScript(
@@ -251,12 +254,20 @@ async function pageIsDark() {
   } catch { return false; }
 }
 
-async function applyOledTheme(enable, userInitiated = false) {
-  if (oledApplying) return; // an apply is already in flight — don't double-insert
-  oledApplying = true;
+// Apply/remove the OLED userstyle on ONE service's view (its own stylesheet).
+async function applyOledToService(svc, enable, userInitiated = false) {
+  if (!svc || !svc.themeable || !svc.oledRemote) return;
+  const entry = views.get(svc.id);
+  if (!entry) return;
+  const wc = entry.view.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  if (oledApplying[svc.id]) return; // an apply is already in flight for this view
+  oledApplying[svc.id] = true;
   try {
-    if (enable && !(await pageIsDark())) {
-      if (userInitiated && mainWindow) {
+    if (enable && !(await pageIsDark(wc))) {
+      // Only Messenger has a user-facing light page worth explaining; the others
+      // are always dark, so just skip silently if a load momentarily reads light.
+      if (userInitiated && svc.id === 'messenger' && mainWindow) {
         dialog.showMessageBox(mainWindow, {
           type: 'info',
           buttons: ['OK'],
@@ -267,9 +278,19 @@ async function applyOledTheme(enable, userInitiated = false) {
       }
       return; // never black out a light page
     }
-    await toggleUserStyle(messengerWc(), 'oled', OLED_CSS_PATH, 'oled', enable);
+    const localPath = path.join(__dirname, `userstyle-${svc.oledRemote}.css`);
+    await toggleUserStyle(wc, svc.oledRemote, localPath, `oled:${svc.id}`, enable);
   } finally {
-    oledApplying = false;
+    oledApplying[svc.id] = false;
+  }
+}
+
+// Apply/remove OLED across every themeable service that currently has a view.
+function applyOledTheme(enable, userInitiated = false) {
+  for (const svc of SERVICES) {
+    if (svc.themeable && svc.oledRemote && views.has(svc.id)) {
+      applyOledToService(svc, enable, userInitiated);
+    }
   }
 }
 
@@ -491,19 +512,22 @@ function makeServiceView(svc) {
     }
 
     if (svc.themeable) {
-      cssKeys.compact = null; // inserted-CSS handles are invalid after a load
-      cssKeys.oled = null;
-      if (s.compactSidebar) applyCompactSidebar(true);
-      if (s.oledTheme) {
+      // inserted-CSS handles are invalid after a load
+      cssKeys[`oled:${svc.id}`] = null;
+      if (svc.id === 'messenger') {
+        cssKeys.compact = null;
+        if (s.compactSidebar) applyCompactSidebar(true);
+      }
+      if (s.oledTheme && svc.oledRemote) {
         // Dark styling can settle after load (SPA); a fresh launch may show the
         // light login page first. Retry the dark-guarded apply briefly.
         let tries = 0;
         const t = setInterval(() => {
-          if (cssKeys.oled !== null || ++tries > 8 || !views.get('messenger') || !loadSettings().oledTheme) {
+          if (cssKeys[`oled:${svc.id}`] != null || ++tries > 8 || !views.get(svc.id) || !loadSettings().oledTheme) {
             clearInterval(t);
             return;
           }
-          applyOledTheme(true);
+          applyOledToService(svc, true);
         }, 800);
       }
     }

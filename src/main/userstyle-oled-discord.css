@@ -1,0 +1,71 @@
+/*
+ * KausApp — Discord Pure Black (OLED) theme  (hosted; fetched at runtime).
+ *
+ * BACKGROUNDS ONLY. We override Discord's background design tokens to a true
+ * black / near-black tier set. We never touch text, role colors, links, embeds'
+ * accent bars, or status colors — only background surfaces.
+ *
+ * Discord ships two token systems and we cover both:
+ *   - the 2024+ "visual refresh" tokens  (--bg-base-*, --bg-surface-*)
+ *   - the legacy tokens                  (--background-primary/secondary/…)
+ * Overriding a token Discord no longer uses is a harmless no-op.
+ *
+ * Tiers:
+ *   - outermost frame / server rail / channel sidebar  -> #000 (true black)
+ *   - chat / primary content                           -> #0a0a0a (a hair lifted)
+ *   - panels / popouts / modals / message box           -> #181818 (clearly lifted)
+ */
+
+html, body, #app-mount, .appMount__51fd7, [class*="appMount"] {
+  background-color: #000 !important;
+}
+
+:root,
+.theme-dark,
+.theme-darker,
+.visual-refresh,
+.theme-dark.visual-refresh {
+  /* --- Visual-refresh base tiers (the app frame + structural surfaces) --- */
+  --bg-base-lowest: #000 !important;
+  --bg-base-lower: #000 !important;
+  --bg-base-low: #050505 !important;
+  --bg-base-default: #0a0a0a !important;
+  --bg-base-higher: #121212 !important;
+  --bg-base-highest: #181818 !important;
+
+  /* --- Visual-refresh raised surfaces (cards, popouts, layered panels) --- */
+  --bg-surface-overlay: #181818 !important;
+  --bg-surface-overlay-tmp: #181818 !important;
+  --bg-surface-raised: #0a0a0a !important;
+  --bg-surface-high: #121212 !important;
+  --bg-surface-higher: #151515 !important;
+  --bg-surface-highest: #181818 !important;
+
+  /* --- Legacy token system --- */
+  --background-primary: #0a0a0a !important;       /* chat area            */
+  --background-secondary: #000 !important;         /* channel sidebar      */
+  --background-secondary-alt: #050505 !important;  /* user area            */
+  --background-tertiary: #000 !important;          /* server rail / search */
+  --background-accent: #181818 !important;
+  --background-floating: #181818 !important;       /* popouts / tooltips   */
+  --background-nested-floating: #1c1c1c !important;
+  --background-mobile-primary: #0a0a0a !important;
+  --background-mobile-secondary: #000 !important;
+
+  /* Composer + quick-switcher + generic inputs -> a clearly lifted box. */
+  --channeltextarea-background: #181818 !important;
+  --input-background: #181818 !important;
+  --deprecated-quickswitcher-input-background: #181818 !important;
+
+  /* Modals / cards. */
+  --modal-background: #0a0a0a !important;
+  --modal-footer-background: #000 !important;
+  --activity-card-background: #181818 !important;
+  --deprecated-card-bg: #0a0a0a !important;
+  --deprecated-card-editable-bg: #0a0a0a !important;
+
+  /* Keep hover/selected feedback subtle but visible against true black. */
+  --background-message-hover: rgba(255, 255, 255, 0.02) !important;
+  --background-modifier-hover: rgba(255, 255, 255, 0.03) !important;
+  --background-modifier-selected: rgba(255, 255, 255, 0.05) !important;
+}
