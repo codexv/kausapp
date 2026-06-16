@@ -64,6 +64,8 @@ const SERVICES = [
     name: 'WhatsApp',
     url: 'https://web.whatsapp.com/',
     color: '#25d366',
+    themeable: true,
+    oledRemote: 'oled-whatsapp', // REMOTE_STYLE key + bundled userstyle-oled-whatsapp.css
     extra: ['whatsapp.net']
   },
   {
@@ -191,7 +193,8 @@ const oledApplying = {};
 const REMOTE_STYLE = {
   compact: 'https://kausapp.com/styles/compact.css',
   oled: 'https://kausapp.com/styles/oled.css',
-  'oled-telegram': 'https://kausapp.com/styles/oled-telegram.css'
+  'oled-telegram': 'https://kausapp.com/styles/oled-telegram.css',
+  'oled-whatsapp': 'https://kausapp.com/styles/oled-whatsapp.css'
 };
 
 async function loadStyleCss(name, localPath) {

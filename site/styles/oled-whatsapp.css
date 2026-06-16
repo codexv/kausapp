@@ -1,0 +1,63 @@
+/*
+ * KausApp — WhatsApp Web Pure Black (OLED) theme  (hosted; fetched at runtime).
+ *
+ * BACKGROUNDS ONLY. WhatsApp Web uses Meta's "WDS" design tokens; dark mode is
+ * applied via body.dark(.color-refresh). We override only the dark BACKGROUND /
+ * SURFACE tier to a true-black set. We never touch:
+ *   - message bubbles (--WDS-systems-bubble-*) or send button (--buttonSend*)
+ *   - --WDS-surface-inverse (intentionally LIGHT in dark mode — tooltips etc.)
+ *   - translucent feedback (--WDS-background-dimmer, --WDS-surface-pressed,
+ *     --WDS-systems-chat-foreground-wallpaper)
+ *   - any text / icon / accent color
+ *
+ * Applied only while WhatsApp is in dark mode (the app's dark-page guard).
+ * WhatsApp's default dark base is ~#0A1014/#111B21; we take it to black tiers.
+ */
+
+.dark,
+.dark.color-refresh,
+.__fb-dark-mode {
+  /* Backmost app wash + structural surfaces → true black. */
+  --WDS-app-wash: #000 !important;
+  --WDS-background-wash-plain: #000 !important;
+  --WDS-background-wash-inset: #000 !important;
+  --WDS-surface-default: #000 !important;
+  --WDS-components-surface-nav-bar: #000 !important;
+  --WDS-systems-chat-background-wallpaper: #000 !important;
+  --WDS-systems-chat-surface-tray: #050505 !important;
+
+  /* RGB twins for the rgba()-composited surfaces above. */
+  --WDS-app-wash-RGB: 0, 0, 0 !important;
+  --WDS-background-wash-plain-RGB: 0, 0, 0 !important;
+  --WDS-background-wash-inset-RGB: 0, 0, 0 !important;
+  --WDS-surface-default-RGB: 0, 0, 0 !important;
+  --WDS-systems-chat-background-wallpaper-RGB: 0, 0, 0 !important;
+
+  /* Slightly lifted tiers so panels / cards / menus separate from the frame. */
+  --WDS-background-elevated-wash-plain: #0a0a0a !important;
+  --WDS-background-elevated-wash-inset: #0a0a0a !important;
+  --WDS-surface-emphasized: #0c0c0c !important;
+  --WDS-surface-elevated-default: #0c0c0c !important;
+  --WDS-surface-elevated-emphasized: #161616 !important;
+  --WDS-surface-elevated-default-RGB: 12, 12, 12 !important;
+
+  /* Selected chat row — keep visible against black. */
+  --WDS-surface-highlight: #1c1c1c !important;
+
+  /* Composer (message input) → a clearly lifted box. */
+  --WDS-systems-chat-surface-composer: #161616 !important;
+  --WDS-systems-chat-surface-composer-RGB: 22, 22, 22 !important;
+
+  /* Splash. */
+  --splashscreen-startup-background: #000 !important;
+  --splashscreen-startup-background-rgb: 0, 0, 0 !important;
+  --splashscreen-progress-background: #161616 !important;
+}
+
+/* Backmost frame. */
+.dark,
+.dark body,
+body.dark,
+.__fb-dark-mode {
+  background-color: #000 !important;
+}

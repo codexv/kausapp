@@ -842,3 +842,24 @@ the native one-time setting is the recommended path.
   zero → full (slow on heavy pages). layout() now keeps ALL views at full content
   size and switches by toggling `setVisible` (Electron 31 has it; falls back to
   the 0×0 hide otherwise). Combined with the earlier acceptFirstMouse fix.
+
+---
+
+## 2026-06-16 — WhatsApp OLED → v0.2.9
+
+- **WhatsApp Web OLED.** WhatsApp uses Meta's "WDS" design tokens (dark via
+  body.dark.color-refresh; default dark ~#0A1014). Added a backgrounds-only
+  stylesheet overriding the dark surface/wash tier to black:
+  --WDS-app-wash / -background-wash-* / -surface-default / -components-surface-nav-bar
+  / -systems-chat-background-wallpaper / -systems-chat-surface-tray → #000 (+ RGB
+  twins); elevated/emphasized → #0a0a0a–#161616; composer → #161616; surface-
+  highlight (selected row) → #1c1c1c; splash → #000. Deliberately NOT touched:
+  --WDS-surface-inverse (stays light #eeeeee), --WDS-background-dimmer / -surface-
+  pressed (translucent), bubbles, send button, text.
+  Marked themeable, oledRemote 'oled-whatsapp'; REMOTE_STYLE entry; bundled +
+  site/styles/oled-whatsapp.css. Found tokens by scraping WhatsApp's stylesheets
+  (logged-out). Verified via injection on body(.dark): surface-default #161717→#000,
+  wallpaper→#000, composer→#161616, inverse unchanged #eeeeee.
+- Dark-page guard applies: WhatsApp must be in Dark theme; its light QR/login page
+  stays light by design.
+- settings.html hint: OLED tuned for Messenger, WhatsApp, Telegram.
