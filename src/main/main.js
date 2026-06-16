@@ -379,6 +379,45 @@ function configureSession(partition) {
 }
 
 // ---------------------------------------------------------------------------
+// Per-service page tweaks (injected JS, not CSS — these need text/structure
+// matching that CSS selectors can't express on obfuscated markup).
+// ---------------------------------------------------------------------------
+// WhatsApp Web's logged-out QR page shows a full-width "Download WhatsApp for
+// Mac/Windows" promo banner above the QR. Its classes are Meta's rotating
+// obfuscated kind, so we find it by its heading text and hide the banner
+// container — with position guards (near top, wide, short) so we can never hide
+// the QR itself. Self-retries for ~15s to catch the SPA's late render; no-ops
+// (and stays cheap) once the user is logged in and the banner is gone.
+const WHATSAPP_HIDE_DOWNLOAD_BANNER = `(function(){
+  var tries = 0;
+  function ownText(el){
+    var t = '';
+    for (var i = 0; i < el.childNodes.length; i++){
+      var n = el.childNodes[i];
+      if (n.nodeType === 3) t += n.textContent;
+    }
+    return t.trim();
+  }
+  function hide(){
+    var divs = document.querySelectorAll('div');
+    for (var i = 0; i < divs.length; i++){
+      if (!/^Download WhatsApp for /i.test(ownText(divs[i]))) continue;
+      // Walk up to the widest near-top, short ancestor = the banner strip.
+      var node = divs[i], banner = null;
+      for (var up = 0; up < 8 && node; up++){
+        var r = node.getBoundingClientRect();
+        if (r.top < 130 && r.width > 360 && r.height > 24 && r.height <= 150) banner = node;
+        node = node.parentElement;
+      }
+      if (banner){ banner.style.setProperty('display', 'none', 'important'); return true; }
+    }
+    return false;
+  }
+  function tick(){ try { hide(); } catch (e) {} if (++tries < 15) setTimeout(tick, 1000); }
+  tick();
+})();`;
+
+// ---------------------------------------------------------------------------
 // Service views (WebContentsView, one per enabled service, kept warm).
 // ---------------------------------------------------------------------------
 function makeServiceView(svc) {
@@ -446,6 +485,10 @@ function makeServiceView(svc) {
     entry.status = 'ready';
     const s = loadSettings();
     wc.setZoomFactor(typeof s.zoomFactor === 'number' ? s.zoomFactor : DEFAULT_ZOOM);
+
+    if (svc.id === 'whatsapp') {
+      wc.executeJavaScript(WHATSAPP_HIDE_DOWNLOAD_BANNER, true).catch(() => { /* best-effort */ });
+    }
 
     if (svc.themeable) {
       cssKeys.compact = null; // inserted-CSS handles are invalid after a load
@@ -618,6 +661,10 @@ function createWindow() {
     title: 'KausApp',
     icon: resolveIcon(),
     backgroundColor: '#000000',
+    // Deliver the FIRST click on the bottom bar even when a service view
+    // currently holds focus. Without this, AppKit swallows that click just to
+    // transfer first-responder, so switching services took two clicks.
+    acceptFirstMouse: true,
     // Hidden native title bar → our own pure-black strip at the top. Keep the OS
     // window controls: traffic lights on macOS, a black overlay on Windows/Linux.
     titleBarStyle: 'hidden',

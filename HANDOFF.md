@@ -749,3 +749,19 @@ User request: bottom bar pure black, plus a pure-black title bar at the very top
   with a text-only fallback if the asset is missing.
 - Verified: `node --check` clean; dev build boots, both black bars render at equal
   height, wordmark shows bottom-right, top bar shows the active service name.
+
+---
+
+## 2026-06-16 — WhatsApp QR banner hide + switch-click fix → v0.2.4
+
+- **WhatsApp "Download WhatsApp for Mac" QR-page banner removed.** New injected
+  JS `WHATSAPP_HIDE_DOWNLOAD_BANNER` (run on the whatsapp view's did-finish-load):
+  finds the div whose own text starts with "Download WhatsApp for", walks up to
+  the wide/short/near-top ancestor (the banner strip) and sets display:none.
+  Position guards (top<130, width>360, 24<h<=150) ensure the QR is never hidden.
+  Self-retries ~15s for the SPA's late render; cheap no-op once logged in.
+  Verified out-of-band: on the live QR page the heading went visible→hidden and
+  hideMatched=true. (Found the selector via a throwaway Electron DOM inspector.)
+- **Switching services needed two clicks — fixed.** Added `acceptFirstMouse:true`
+  to the BrowserWindow. When a service WebContentsView held focus, AppKit ate the
+  first click on the bottom bar (first-responder transfer); now that click counts.
