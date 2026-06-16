@@ -85,8 +85,8 @@ const SERVICES = [
     name: 'Discord',
     url: 'https://discord.com/app',
     color: '#5865f2',
-    themeable: true,
-    oledRemote: 'oled-discord', // REMOTE_STYLE key + bundled userstyle-oled-discord.css
+    // Not custom-themed: Discord has its own built-in OLED ("Midnight")
+    // appearance which syncs to the account — users enable it in Discord itself.
     extra: ['discordapp.com', 'discordapp.net', 'discord.gg']
   }
 ];
@@ -188,8 +188,7 @@ const oledApplying = {};
 
 const REMOTE_STYLE = {
   compact: 'https://kausapp.com/styles/compact.css',
-  oled: 'https://kausapp.com/styles/oled.css',
-  'oled-discord': 'https://kausapp.com/styles/oled-discord.css'
+  oled: 'https://kausapp.com/styles/oled.css'
 };
 
 async function loadStyleCss(name, localPath) {

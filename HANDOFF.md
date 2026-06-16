@@ -808,3 +808,19 @@ as the second themeable service (user request: extend OLED, one at a time).
   the pending pushTimer.
 - **Version shown in the bottom-bar wordmark:** "KausApp v<x.y.z>" (version in a
   muted `.ver` span). `shell:brand` now sends `{icon, version}`; shell renders it.
+
+---
+
+## 2026-06-16 — Revert custom Discord theme; use its built-in OLED → v0.2.7
+
+Per user: Discord has a native OLED ("Midnight") appearance that syncs to the
+account, so a hand-maintained CSS theme is wrong. Reverted:
+- Discord no longer `themeable`/`oledRemote` in SERVICES; removed
+  `REMOTE_STYLE['oled-discord']`; deleted `src/main/userstyle-oled-discord.css`
+  and `site/styles/oled-discord.css`.
+- The per-service OLED engine stays (Messenger uses it; future services welcome).
+- settings.html hint: Discord uses its own built-in OLED (enable in Discord →
+  Settings → Appearance; syncs automatically).
+Note: programmatically flipping Discord's account theme from the wrapper isn't
+robust (Flux-store/account-synced; class injection fights Discord re-renders), so
+the native one-time setting is the recommended path.
