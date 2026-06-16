@@ -880,3 +880,18 @@ takes effect on service reload (did-finish-load re-fetches the cache-busted css)
   the chat wallpaper (.WallpaperBg / #MiddleColumn::before → no image, #000).
 - Synced bundled + site/styles; deployed; confirmed new rules live. Bundled copies
   committed (will ride the next app release; hosted is what applies at runtime).
+
+---
+
+## 2026-06-16 — Bottom bar: service icons → segmented tab container → v0.2.10
+
+User request: make the bottom service icons look like tabs in a horizontal
+rectangular container.
+- shell.html: `.services` is now a rounded container (#141417, 1px border,
+  --r-lg, 3px padding). `.services .btn` are 46×36 --r-sm segments. Active tab =
+  accent-soft fill + inset accent ring (removed the old underline ::after).
+  Unread badge ring recolored to #141417 to match the container.
+- Bundled UI (shell.html) → ships via app release.
+- Also (prior turn, hosted, no release): WhatsApp OLED temporarily disabled
+  (site/styles/oled-whatsapp.css = no-op) per user request to inspect WhatsApp's
+  native theme; full theme retained in src + git for restore.
