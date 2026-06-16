@@ -44,3 +44,11 @@ html.theme-dark body {
   background-image: none !important;
   background-color: #000 !important;
 }
+
+/* Composer: the bar inherits --color-background (#000), but lift the actual
+   input box to dark gray so it reads as a distinct field against the black. */
+.message-input-wrapper,
+.input-scroller,
+#editable-message-text {
+  background-color: #1c1c1c !important;
+}
