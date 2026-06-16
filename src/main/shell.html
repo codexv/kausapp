@@ -99,6 +99,7 @@
     .brand .logo { width: 22px; height: 22px; border-radius: var(--r-sm); object-fit: contain; }
     .brand .logo.hidden { display: none; }
     .brand .name { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; white-space: nowrap; }
+    .brand .ver { font-weight: 600; color: var(--muted); font-size: 12px; }
 
     .glyph { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -148,7 +149,7 @@
     <div class="services" id="services"></div>
     <div class="spacer"></div>
     <div class="actions">
-      <div class="brand"><img class="logo hidden" id="brand-logo" alt=""><span class="name">KausApp</span></div>
+      <div class="brand"><img class="logo hidden" id="brand-logo" alt=""><span class="name">KausApp <span class="ver" id="brand-ver"></span></span></div>
       <div class="sep"></div>
       <button class="btn" id="add" data-tip="Add a service" aria-label="Add a service">
         <svg class="glyph" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -225,9 +226,12 @@
     document.getElementById('retry').addEventListener('click', function () { window.shell.reload(); });
 
     var brandLogo = document.getElementById('brand-logo');
-    window.shell.onBrand(function (url) {
-      if (url) { brandLogo.src = url; brandLogo.classList.remove('hidden'); }
+    var brandVer = document.getElementById('brand-ver');
+    window.shell.onBrand(function (info) {
+      info = info || {};
+      if (info.icon) { brandLogo.src = info.icon; brandLogo.classList.remove('hidden'); }
       else { brandLogo.classList.add('hidden'); }
+      brandVer.textContent = info.version ? 'v' + info.version : '';
     });
 
     window.shell.onState(render);

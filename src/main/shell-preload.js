@@ -8,7 +8,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('shell', {
   onState: (cb) => ipcRenderer.on('shell:state', (e, state) => cb(state)),
-  onBrand: (cb) => ipcRenderer.on('shell:brand', (e, url) => cb(url)),
+  onBrand: (cb) => ipcRenderer.on('shell:brand', (e, info) => cb(info)),
   switchTo: (id) => ipcRenderer.send('shell:switch', id),
   reload: () => ipcRenderer.send('shell:reload'),
   openSettings: (tab) => ipcRenderer.send('shell:open-settings', tab),

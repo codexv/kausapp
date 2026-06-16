@@ -586,7 +586,7 @@ function setActive(id) {
 
 // Position the active service view (and settings overlay) above the bottom bar.
 function layout() {
-  if (!mainWindow) return;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
   const [w, h] = mainWindow.getContentSize();
   // Content sits between the top title bar and the bottom service bar.
   const contentH = Math.max(0, h - TOP_BAR - BAR_HEIGHT);
@@ -611,7 +611,10 @@ function pushState() {
 }
 
 function doPushState() {
-  if (!mainWindow || mainWindow.webContents.isDestroyed()) return;
+  // The debounced timer can fire after the window is gone (quit). Check the
+  // window itself BEFORE touching .webContents — a destroyed BrowserWindow
+  // throws "Object has been destroyed" on any property access.
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return;
   const active = activeId && views.get(activeId);
   const payload = {
     services: orderedEnabledServices().map((svc) => {
@@ -720,6 +723,13 @@ function createWindow() {
       return;
     }
     saveWindowState();
+  });
+
+  // Window really gone (quit): drop the reference and cancel any pending pushState
+  // timer so it can't fire against a destroyed window.
+  mainWindow.on('closed', () => {
+    if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+    mainWindow = null;
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -1024,8 +1034,8 @@ async function sendThemeDiagnostics() {
 function registerShellIpc() {
   ipcMain.on('shell:ready', () => {
     pushState();
-    if (mainWindow && !mainWindow.webContents.isDestroyed()) {
-      mainWindow.webContents.send('shell:brand', brandIcon());
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('shell:brand', { icon: brandIcon(), version: app.getVersion() });
     }
   });
   // The bar only renders enabled services, so a valid switch always has a view.

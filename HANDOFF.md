@@ -795,3 +795,16 @@ as the second themeable service (user request: extend OLED, one at a time).
   (token chunk loads post-login) — needs user verification on their session to
   fine-tune the tiers. Hosted css → future tweaks need no app release.
 - settings.html hint updated: "OLED is tuned for Messenger and Discord."
+
+---
+
+## 2026-06-16 — Crash fix (destroyed window) + version in wordmark → v0.2.6
+
+- **Fix uncaught "Object has been destroyed" in doPushState.** The debounced
+  pushState timer could fire after the window was destroyed on quit; the guard
+  read `mainWindow.webContents` before checking the window, which throws on a
+  destroyed BrowserWindow. Now guards `mainWindow.isDestroyed()` first; `layout()`
+  hardened likewise; added a `closed` handler that nulls mainWindow and clears
+  the pending pushTimer.
+- **Version shown in the bottom-bar wordmark:** "KausApp v<x.y.z>" (version in a
+  muted `.ver` span). `shell:brand` now sends `{icon, version}`; shell renders it.
