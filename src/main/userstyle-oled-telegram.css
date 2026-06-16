@@ -32,22 +32,30 @@ html.theme-dark body {
   background-color: #000 !important;
 }
 
-/* Conversation column → true black, and flatten the default chat wallpaper
-   pattern so the chat area reads as solid black (not the patterned default). */
-#MiddleColumn,
-.MessageList {
+/* Conversation background. Telegram-tt renders the chat background as a
+   (CSS-module-hashed) ".background" div inside #MiddleColumn: its color is
+   var(--theme-background-color) and the DEFAULT doodle is drawn on its ::after
+   from pattern.svg. We can't name the hashed class, so: force the base black via
+   the var + #MiddleColumn, and remove the pattern by clearing the pseudo-element
+   backgrounds of #MiddleColumn's direct children (only the background layer and
+   the footer gradient use those). */
+html.theme-dark,
+.component-theme-dark,
+:root {
+  --theme-background-color: #000 !important;
+}
+#MiddleColumn {
   background-color: #000 !important;
 }
-#MiddleColumn .WallpaperBg,
-#MiddleColumn > .messages-layout > .custom-scroll,
-#MiddleColumn::before {
+#MiddleColumn > div::before,
+#MiddleColumn > div::after {
+  background: none !important;
   background-image: none !important;
-  background-color: #000 !important;
 }
 
 /* Composer: the bar inherits --color-background (#000); lift ONLY the rounded
-   input field to dark gray (not the inner scroller/editable, which render as a
-   full-width rectangle). */
+   input field to dark gray. .input-scroller is the rectangular inner scroller —
+   leave it transparent so we don't get a gray rectangle. */
 .message-input-wrapper {
   background-color: #1c1c1c !important;
 }
