@@ -45,10 +45,9 @@ html.theme-dark body {
   background-color: #000 !important;
 }
 
-/* Composer: the bar inherits --color-background (#000), but lift the actual
-   input box to dark gray so it reads as a distinct field against the black. */
-.message-input-wrapper,
-.input-scroller,
-#editable-message-text {
+/* Composer: the bar inherits --color-background (#000); lift ONLY the rounded
+   input field to dark gray (not the inner scroller/editable, which render as a
+   full-width rectangle). */
+.message-input-wrapper {
   background-color: #1c1c1c !important;
 }
