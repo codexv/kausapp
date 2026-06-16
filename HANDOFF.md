@@ -824,3 +824,21 @@ account, so a hand-maintained CSS theme is wrong. Reverted:
 Note: programmatically flipping Discord's account theme from the wrapper isn't
 robust (Flux-store/account-synced; class injection fights Discord re-renders), so
 the native one-time setting is the recommended path.
+
+---
+
+## 2026-06-16 — Telegram OLED + instant service switching → v0.2.8
+
+- **Telegram (Web A) OLED.** Telegram has no built-in OLED (its dark theme is
+  #212121 gray), so added a custom backgrounds-only stylesheet overriding its
+  --color-background* tokens (conversation #0c0c0c, chat list #000, hover/active/
+  borders near-black); bubbles/accent/text untouched. Telegram marked themeable
+  with oledRemote 'oled-telegram'; REMOTE_STYLE entry added; bundled +
+  site/styles/oled-telegram.css. Responds to the global OLED toggle (dark-guarded).
+  Verified via injection: --color-background #212121→#0c0c0c, container→#0c0c0c;
+  and full app boot on Telegram shows the near-black login.
+- **Switching now responds instantly.** Root cause of the lag: inactive views
+  were sized 0×0, so each switch forced the shown view to relayout/repaint from
+  zero → full (slow on heavy pages). layout() now keeps ALL views at full content
+  size and switches by toggling `setVisible` (Electron 31 has it; falls back to
+  the 0×0 hide otherwise). Combined with the earlier acceptFirstMouse fix.

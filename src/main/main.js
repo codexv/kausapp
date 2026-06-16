@@ -78,6 +78,8 @@ const SERVICES = [
     name: 'Telegram',
     url: 'https://web.telegram.org/a/',
     color: '#2aabee',
+    themeable: true,
+    oledRemote: 'oled-telegram', // REMOTE_STYLE key + bundled userstyle-oled-telegram.css
     extra: []
   },
   {
@@ -188,7 +190,8 @@ const oledApplying = {};
 
 const REMOTE_STYLE = {
   compact: 'https://kausapp.com/styles/compact.css',
-  oled: 'https://kausapp.com/styles/oled.css'
+  oled: 'https://kausapp.com/styles/oled.css',
+  'oled-telegram': 'https://kausapp.com/styles/oled-telegram.css'
 };
 
 async function loadStyleCss(name, localPath) {
@@ -584,21 +587,29 @@ function setActive(id) {
 }
 
 // Position the active service view (and settings overlay) above the bottom bar.
+// All views are kept at full content size always; we switch by toggling
+// VISIBILITY, not by resizing. Resizing a view from 0×0 to full on every switch
+// forced a full relayout/repaint of a heavy page (the "switch doesn't respond
+// right away" lag) — keeping them sized and flipping setVisible makes the swap
+// instant. (Falls back to the old 0×0 hide if setVisible isn't available.)
 function layout() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const [w, h] = mainWindow.getContentSize();
   // Content sits between the top title bar and the bottom service bar.
   const contentH = Math.max(0, h - TOP_BAR - BAR_HEIGHT);
+  const full = { x: 0, y: TOP_BAR, width: w, height: contentH };
   for (const [id, entry] of views) {
-    // Active view fills the content area — unless it failed to load, where we
-    // hide it (0×0) so the shell's error overlay shows through underneath.
-    if (id === activeId && !settingsView && entry.status !== 'failed') {
-      entry.view.setBounds({ x: 0, y: TOP_BAR, width: w, height: contentH });
+    // Active view shows — unless it failed to load (then the shell's error
+    // overlay shows through) or the settings panel is open over it.
+    const visible = id === activeId && !settingsView && entry.status !== 'failed';
+    if (typeof entry.view.setVisible === 'function') {
+      entry.view.setBounds(full);
+      entry.view.setVisible(visible);
     } else {
-      entry.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+      entry.view.setBounds(visible ? full : { x: 0, y: 0, width: 0, height: 0 });
     }
   }
-  if (settingsView) settingsView.setBounds({ x: 0, y: TOP_BAR, width: w, height: contentH });
+  if (settingsView) settingsView.setBounds(full);
 }
 
 // Push the bottom-bar state (services, badges, active) to the shell renderer.

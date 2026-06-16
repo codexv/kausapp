@@ -1,0 +1,33 @@
+/*
+ * KausApp — Telegram (Web A) Pure Black (OLED) theme  (hosted; fetched at runtime).
+ *
+ * BACKGROUNDS ONLY. Telegram Web A drives its theme from --color-* custom
+ * properties (defined under .component-theme-dark / html.theme-dark). We override
+ * only the BACKGROUND tier to near-black. We never touch message bubbles
+ * (--color-background-own), accent/primary, active-chat highlight, or text.
+ *
+ * Applied only while Telegram is in its dark theme (the app's dark-page guard),
+ * so it can't black out a light page.
+ *
+ * Telegram's default dark tiers: conversation #212121 (lighter), chat list
+ * #0f0f0f (darker). We keep that relationship — list pure black, conversation a
+ * hair lifted — so the two columns still read as distinct.
+ */
+
+html.theme-dark,
+.component-theme-dark,
+:root {
+  --color-background: #0c0c0c !important;            /* conversation area    */
+  --color-background-secondary: #000 !important;      /* chat list / sidebar  */
+  --color-background-secondary-accent: #0a0a0a !important;
+  --color-chat-hover: #161616 !important;             /* chat-row hover       */
+  --color-item-active: #1c1c1c !important;            /* selected chat row    */
+  --color-borders: #1a1a1a !important;                /* dividers             */
+  --color-borders-input: #2a2a2a !important;          /* composer/input edge  */
+}
+
+/* Backmost frame → true black behind everything. */
+html.theme-dark,
+html.theme-dark body {
+  background-color: #000 !important;
+}
