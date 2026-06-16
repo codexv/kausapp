@@ -735,3 +735,17 @@ User request: bottom bar pure black, plus a pure-black title bar at the very top
   renders the black top strip with the centered service name and the offset
   content view, no JS errors. Bundled change → ships via app release only (no
   Cloudflare deploy).
+
+---
+
+## 2026-06-16 — Bar polish (equal heights + bottom wordmark) → v0.2.3
+
+- Top + bottom bars now equal height: both `48px` (top was 36→bumped, bottom
+  56→trimmed). `main.js` `TOP_BAR=48`, `BAR_HEIGHT=48`, mac
+  `trafficLightPosition.y=17`; `shell.html` `--top-h`/`--bar-h` = 48px.
+- Bottom bar right side gained an app wordmark (logo + "KausApp") before the `+`.
+  The icon is sent to the shell once as a data URL via a new `shell:brand` IPC
+  (`brandIcon()` resizes assets/icon.png to 36px; CSP already allows `data:`),
+  with a text-only fallback if the asset is missing.
+- Verified: `node --check` clean; dev build boots, both black bars render at equal
+  height, wordmark shows bottom-right, top bar shows the active service name.

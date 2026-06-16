@@ -10,8 +10,8 @@
   <title>KausApp</title>
   <style>
     :root {
-      --bar-h: 56px;
-      --top-h: 36px;
+      --bar-h: 48px;
+      --top-h: 48px;
       --bg: #0a0a0c;
       --bar-bg: #000;
       --surface: #141417;
@@ -94,6 +94,12 @@
 
     .sep { width: 1px; height: 26px; background: var(--border); margin: 0 4px; -webkit-app-region: no-drag; }
 
+    /* App wordmark on the right of the bottom bar, before the + button. */
+    .brand { display: flex; align-items: center; gap: 8px; padding: 0 4px 0 8px; -webkit-app-region: no-drag; }
+    .brand .logo { width: 22px; height: 22px; border-radius: var(--r-sm); object-fit: contain; }
+    .brand .logo.hidden { display: none; }
+    .brand .name { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; white-space: nowrap; }
+
     .glyph { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
     /* Tooltip. */
@@ -142,6 +148,8 @@
     <div class="services" id="services"></div>
     <div class="spacer"></div>
     <div class="actions">
+      <div class="brand"><img class="logo hidden" id="brand-logo" alt=""><span class="name">KausApp</span></div>
+      <div class="sep"></div>
       <button class="btn" id="add" data-tip="Add a service" aria-label="Add a service">
         <svg class="glyph" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
       </button>
@@ -215,6 +223,12 @@
     document.getElementById('add').addEventListener('click', function () { window.shell.addService(); });
     document.getElementById('settings').addEventListener('click', function () { window.shell.openSettings('appearance'); });
     document.getElementById('retry').addEventListener('click', function () { window.shell.reload(); });
+
+    var brandLogo = document.getElementById('brand-logo');
+    window.shell.onBrand(function (url) {
+      if (url) { brandLogo.src = url; brandLogo.classList.remove('hidden'); }
+      else { brandLogo.classList.add('hidden'); }
+    });
 
     window.shell.onState(render);
     window.shell.ready();

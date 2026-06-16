@@ -26,12 +26,13 @@ const REPORT_ENDPOINT = 'https://kausapp.com/api/report';
 const DEFAULT_ZOOM = 0.9;
 
 // Height of the bottom service bar (the app chrome strip beneath the web views).
-const BAR_HEIGHT = 56;
+// Kept equal to the top title bar so the two black strips are symmetric.
+const BAR_HEIGHT = 48;
 
 // Height of the custom (frameless) title bar at the very top. The window uses a
 // hidden native title bar so this strip can be painted pure black; the OS window
 // controls (mac traffic lights / Win+Linux overlay) are positioned within it.
-const TOP_BAR = 36;
+const TOP_BAR = 48;
 
 // electron-context-menu is ESM-only (v4+), so it's loaded via dynamic import()
 // inside app.whenReady() rather than a top-level require.
@@ -621,7 +622,7 @@ function createWindow() {
     // window controls: traffic lights on macOS, a black overlay on Windows/Linux.
     titleBarStyle: 'hidden',
     ...(process.platform === 'darwin'
-      ? { trafficLightPosition: { x: 12, y: 11 } }
+      ? { trafficLightPosition: { x: 12, y: 17 } }
       : { titleBarOverlay: { color: '#000000', symbolColor: '#e8eefc', height: TOP_BAR } }),
     webPreferences: {
       preload: path.join(__dirname, 'shell-preload.js'),
@@ -668,6 +669,16 @@ function resolveIcon() {
     if (!img.isEmpty()) return img;
   }
   return undefined;
+}
+
+// The app icon as a small data URL for the shell's bottom-bar wordmark. Computed
+// once; '' if no icon asset (the shell falls back to a text-only wordmark).
+let brandIconUrl = null;
+function brandIcon() {
+  if (brandIconUrl !== null) return brandIconUrl;
+  const img = resolveIcon();
+  brandIconUrl = img ? img.resize({ width: 36, height: 36 }).toDataURL() : '';
+  return brandIconUrl;
 }
 
 // ---------------------------------------------------------------------------
@@ -940,7 +951,12 @@ async function sendThemeDiagnostics() {
 // IPC from the shell (bottom bar) and the settings panel.
 // ---------------------------------------------------------------------------
 function registerShellIpc() {
-  ipcMain.on('shell:ready', () => pushState());
+  ipcMain.on('shell:ready', () => {
+    pushState();
+    if (mainWindow && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('shell:brand', brandIcon());
+    }
+  });
   // The bar only renders enabled services, so a valid switch always has a view.
   ipcMain.on('shell:switch', (e, id) => { if (id && views.has(id)) setActive(id); });
   ipcMain.on('shell:reload', () => { const wc = activeWc(); if (wc && !wc.isDestroyed()) wc.reload(); });
