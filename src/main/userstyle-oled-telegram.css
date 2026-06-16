@@ -17,7 +17,7 @@
 html.theme-dark,
 .component-theme-dark,
 :root {
-  --color-background: #0c0c0c !important;            /* conversation area    */
+  --color-background: #000 !important;               /* conversation area    */
   --color-background-secondary: #000 !important;      /* chat list / sidebar  */
   --color-background-secondary-accent: #0a0a0a !important;
   --color-chat-hover: #161616 !important;             /* chat-row hover       */
@@ -29,5 +29,18 @@ html.theme-dark,
 /* Backmost frame → true black behind everything. */
 html.theme-dark,
 html.theme-dark body {
+  background-color: #000 !important;
+}
+
+/* Conversation column → true black, and flatten the default chat wallpaper
+   pattern so the chat area reads as solid black (not the patterned default). */
+#MiddleColumn,
+.MessageList {
+  background-color: #000 !important;
+}
+#MiddleColumn .WallpaperBg,
+#MiddleColumn > .messages-layout > .custom-scroll,
+#MiddleColumn::before {
+  background-image: none !important;
   background-color: #000 !important;
 }

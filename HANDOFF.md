@@ -863,3 +863,20 @@ the native one-time setting is the recommended path.
 - Dark-page guard applies: WhatsApp must be in Dark theme; its light QR/login page
   stays light by design.
 - settings.html hint: OLED tuned for Messenger, WhatsApp, Telegram.
+
+---
+
+## 2026-06-16 — WhatsApp/Telegram chat bg + left column to true black (hosted-only)
+
+User: make WhatsApp's chat background + leftmost column black, and Telegram's
+default (conversation) background black. Hosted-CSS tweaks → no app release;
+takes effect on service reload (did-finish-load re-fetches the cache-busted css).
+- WhatsApp (oled-whatsapp.css): set --WDS-systems-chat-foreground-wallpaper:
+  transparent (kills the conversation doodle → pure black), and pinned the stable
+  structural IDs #side / #pane-side (left chat-list column) + #main (conversation)
+  to #000 regardless of token. Verified the foreground token resolves transparent.
+- Telegram (oled-telegram.css): --color-background #0c0c0c → #000 (conversation
+  pure black); added #MiddleColumn/.MessageList → #000 and best-effort flatten of
+  the chat wallpaper (.WallpaperBg / #MiddleColumn::before → no image, #000).
+- Synced bundled + site/styles; deployed; confirmed new rules live. Bundled copies
+  committed (will ride the next app release; hosted is what applies at runtime).

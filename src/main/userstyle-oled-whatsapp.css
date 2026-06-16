@@ -25,6 +25,8 @@
   --WDS-components-surface-nav-bar: #000 !important;
   --WDS-systems-chat-background-wallpaper: #000 !important;
   --WDS-systems-chat-surface-tray: #050505 !important;
+  /* Kill the conversation doodle pattern so the chat area is pure black. */
+  --WDS-systems-chat-foreground-wallpaper: transparent !important;
 
   /* RGB twins for the rgba()-composited surfaces above. */
   --WDS-app-wash-RGB: 0, 0, 0 !important;
@@ -59,5 +61,14 @@
 .dark body,
 body.dark,
 .__fb-dark-mode {
+  background-color: #000 !important;
+}
+
+/* Pin WhatsApp Web's stable structural regions to true black, regardless of
+   which token they happen to resolve through:
+   #side / #pane-side = the left chat-list column, #main = the conversation. */
+#side,
+#pane-side,
+#main {
   background-color: #000 !important;
 }
