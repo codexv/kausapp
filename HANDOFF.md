@@ -895,3 +895,15 @@ rectangular container.
 - Also (prior turn, hosted, no release): WhatsApp OLED temporarily disabled
   (site/styles/oled-whatsapp.css = no-op) per user request to inspect WhatsApp's
   native theme; full theme retained in src + git for restore.
+
+---
+
+## 2026-06-16 — Bottom bar: per-icon rectangles (no group container) → v0.2.11
+
+User: each service icon should have its own rectangle enclosure (no single
+container for the whole group), and a bit wider.
+- shell.html: `.services` reverted to a plain flex row (gap 6px, no bg/border).
+  Each `.services .btn` is now its own rectangle — 54×38 (wider), #141417 fill +
+  1px border, --r-sm. Active tab = accent-soft fill + accent border. Badge ring
+  stays #141417 (matches each tab).
+- Bundled UI → app release.
