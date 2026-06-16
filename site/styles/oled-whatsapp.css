@@ -46,6 +46,17 @@
   /* Selected chat row — keep visible against black. */
   --WDS-surface-highlight: #1c1c1c !important;
 
+  /* The chat-list column, headers, tabs, and date/system rows reference Meta's
+   * PALETTE tokens DIRECTLY (not the semantic surface tokens above), which is why
+   * overriding the semantic ones left them gray. Diagnostics from the live app:
+   * chat list = neutral-gray-900 (#161717), headers/rows = neutral-gray-850
+   * (#1D1F1F). We override those to black. We deliberately STOP at gray-850 —
+   * gray-800 (#242626) is the INCOMING-BUBBLE + composer color and must stay. */
+  --WDS-neutral-gray-900: #000 !important;
+  --WDS-neutral-gray-850: #0a0a0a !important;
+  --WDS-cool-gray-1000: #000 !important;
+  --WDS-cool-gray-900: #0a0a0a !important;
+
   /* Composer (message input) → a clearly lifted box. */
   --WDS-systems-chat-surface-composer: #161616 !important;
   --WDS-systems-chat-surface-composer-RGB: 22, 22, 22 !important;

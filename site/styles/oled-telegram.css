@@ -58,4 +58,5 @@ html.theme-dark,
    leave it transparent so we don't get a gray rectangle. */
 .message-input-wrapper {
   background-color: #1c1c1c !important;
+  border-radius: 12px !important;
 }
