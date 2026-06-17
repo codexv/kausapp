@@ -92,10 +92,47 @@ const SERVICES = [
     // Not custom-themed: Discord has its own built-in OLED ("Midnight")
     // appearance which syncs to the account — users enable it in Discord itself.
     extra: ['discordapp.com', 'discordapp.net', 'discord.gg']
+  },
+  // --- Optional services: NOT enabled by default; user adds them via "+". ---
+  {
+    id: 'slack',
+    name: 'Slack',
+    url: 'https://app.slack.com/client',
+    color: '#4a154b',
+    optional: true,
+    extra: ['slack.com', 'slack-edge.com', 'slackb.com']
+  },
+  {
+    id: 'teams',
+    name: 'Microsoft Teams',
+    url: 'https://teams.microsoft.com/',
+    color: '#6264a7',
+    optional: true,
+    extra: ['microsoft.com', 'microsoftonline.com', 'office.com', 'office365.com',
+            'live.com', 'sharepoint.com', 'skype.com', 'sfbassets.com', 'cdn.office.net']
+  },
+  {
+    id: 'googlechat',
+    name: 'Google Chat',
+    url: 'https://chat.google.com/',
+    color: '#00ac47',
+    optional: true,
+    extra: ['google.com', 'gstatic.com', 'googleusercontent.com', 'googleapis.com',
+            'accounts.google.com', 'gvt1.com']
+  },
+  {
+    id: 'x',
+    name: 'X',
+    url: 'https://x.com/messages',
+    color: '#1d9bf0',
+    optional: true,
+    extra: ['twitter.com', 'twimg.com', 't.co']
   }
 ];
 
-const DEFAULT_ENABLED = SERVICES.map((s) => s.id);
+// Only the core (non-optional) services are on by default. Optional ones
+// (Slack/Teams/Google Chat/X) stay off until the user adds them via "+".
+const DEFAULT_ENABLED = SERVICES.filter((s) => !s.optional).map((s) => s.id);
 
 const isDev = process.argv.includes('--dev');
 
@@ -1054,6 +1091,17 @@ function registerShellIpc() {
   // The bar only renders enabled services, so a valid switch always has a view.
   ipcMain.on('shell:switch', (e, id) => { if (id && views.has(id)) setActive(id); });
   ipcMain.on('shell:reload', () => { const wc = activeWc(); if (wc && !wc.isDestroyed()) wc.reload(); });
+  // Drag-to-reorder from the bottom bar: persist the new order (enabled tabs as
+  // dragged, then any remaining services appended so their slots are preserved).
+  ipcMain.on('shell:reorder', (e, order) => {
+    if (!Array.isArray(order)) return;
+    const known = new Set(SERVICES.map((s) => s.id));
+    const clean = order.filter((id) => known.has(id));
+    if (!clean.length) return;
+    const rest = SERVICES.map((s) => s.id).filter((id) => !clean.includes(id));
+    saveSettings({ serviceOrder: [...clean, ...rest] });
+    pushState();
+  });
   ipcMain.on('shell:open-settings', (e, tab) => openSettings(tab));
 
   ipcMain.handle('settings:load', () => {

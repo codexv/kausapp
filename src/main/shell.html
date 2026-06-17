@@ -86,6 +86,12 @@
       background: var(--accent-soft); color: #fff;
       border-color: rgba(20, 86, 255, 0.55);
     }
+    .services .btn { cursor: grab; }
+    /* While being dragged to reorder. */
+    .services .btn.dragging {
+      opacity: 0.6; cursor: grabbing; transform: scale(1.05);
+      border-color: var(--accent); z-index: 2;
+    }
 
     .ico { width: 24px; height: 24px; border-radius: var(--r-sm); object-fit: cover; pointer-events: none; }
     /* Fallback monogram chip when a favicon hasn't loaded yet. */
@@ -178,6 +184,10 @@
     var errDetail = document.getElementById('err-detail');
     var titleEl = document.getElementById('title');
 
+    var drag = null;            // active drag-reorder state
+    var suppressClick = false;  // ignore the click that ends a drag
+    var pendingState = null;    // state push deferred while dragging
+
     function initial(name) { return (name || '?').trim().charAt(0).toUpperCase(); }
 
     function makeChip(svc) {
@@ -189,12 +199,14 @@
     }
 
     function render(state) {
+      if (drag) { pendingState = state; return; } // don't rebuild mid-drag
       titleEl.textContent = (state && state.activeName) || 'KausApp';
       var list = (state && state.services) || [];
       servicesEl.innerHTML = '';
       list.forEach(function (svc) {
         var btn = document.createElement('button');
         btn.className = 'btn' + (svc.active ? ' active' : '');
+        btn.dataset.id = svc.id;
         btn.setAttribute('data-tip', svc.name);
         btn.setAttribute('aria-label', svc.name);
         if (svc.active) btn.setAttribute('aria-current', 'true');
@@ -217,7 +229,13 @@
           btn.appendChild(b);
         }
 
-        btn.addEventListener('click', function () { window.shell.switchTo(svc.id); });
+        btn.addEventListener('click', function () {
+          if (suppressClick) return;       // this click ended a drag
+          window.shell.switchTo(svc.id);
+        });
+        btn.addEventListener('pointerdown', function (e) {
+          if (e.button === 0) drag = { btn: btn, startX: e.clientX, moved: false };
+        });
         servicesEl.appendChild(btn);
       });
 
@@ -242,6 +260,40 @@
       if (info.icon) { brandLogo.src = info.icon; brandLogo.classList.remove('hidden'); }
       else { brandLogo.classList.add('hidden'); }
       brandVer.textContent = info.version ? 'v' + info.version : '';
+    });
+
+    // --- Drag-to-reorder the service tabs ---
+    function tabBefore(x) {
+      var tabs = Array.prototype.slice.call(servicesEl.querySelectorAll('.btn:not(.dragging)'));
+      for (var i = 0; i < tabs.length; i++) {
+        var r = tabs[i].getBoundingClientRect();
+        if (x < r.left + r.width / 2) return tabs[i];
+      }
+      return null;
+    }
+    document.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      if (!drag.moved) {
+        if (Math.abs(e.clientX - drag.startX) < 5) return; // ignore tiny jitters
+        drag.moved = true;
+        drag.btn.classList.add('dragging');
+      }
+      var ref = tabBefore(e.clientX);
+      if (ref == null) servicesEl.appendChild(drag.btn);
+      else if (ref !== drag.btn) servicesEl.insertBefore(drag.btn, ref);
+    });
+    document.addEventListener('pointerup', function () {
+      if (!drag) return;
+      var d = drag; drag = null;
+      if (d.moved) {
+        d.btn.classList.remove('dragging');
+        suppressClick = true;
+        setTimeout(function () { suppressClick = false; }, 60);
+        var order = Array.prototype.slice.call(servicesEl.querySelectorAll('.btn'))
+          .map(function (b) { return b.dataset.id; });
+        window.shell.reorder(order);
+      }
+      if (pendingState) { var s = pendingState; pendingState = null; render(s); }
     });
 
     window.shell.onState(render);

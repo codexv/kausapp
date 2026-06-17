@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('shell', {
   onState: (cb) => ipcRenderer.on('shell:state', (e, state) => cb(state)),
   onBrand: (cb) => ipcRenderer.on('shell:brand', (e, info) => cb(info)),
   switchTo: (id) => ipcRenderer.send('shell:switch', id),
+  reorder: (order) => ipcRenderer.send('shell:reorder', order),
   reload: () => ipcRenderer.send('shell:reload'),
   openSettings: (tab) => ipcRenderer.send('shell:open-settings', tab),
   addService: () => ipcRenderer.send('shell:open-settings', 'services'),

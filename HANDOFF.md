@@ -907,3 +907,20 @@ container for the whole group), and a bit wider.
   1px border, --r-sm. Active tab = accent-soft fill + accent border. Badge ring
   stays #141417 (matches each tab).
 - Bundled UI → app release.
+
+---
+
+## 2026-06-17 — +4 optional services + drag-to-reorder bar tabs → v0.2.12
+
+- Added Slack (app.slack.com), Microsoft Teams (teams.microsoft.com), Google Chat
+  (chat.google.com), X (x.com/messages) to SERVICES, each `optional: true` with
+  its auth/CDN `extra` hosts. NOT themeable yet.
+- `optional` services are OFF by default: `DEFAULT_ENABLED = SERVICES.filter(!optional)`.
+  They don't auto-appear; the user adds them via the "+" button (→ Settings →
+  Services → toggle on). Existing users' saved enabledServices already exclude them.
+- Drag-to-reorder the bottom-bar tabs: shell.html pointer-drag (5px threshold,
+  live insertBefore by pointer x, `.dragging` style, click suppressed after a
+  drag, state pushes deferred mid-drag). New `shell:reorder` IPC persists
+  serviceOrder (dragged enabled order + remaining ids appended) + pushState.
+  shell-preload exposes `reorder`. Settings ↑↓ reorder still works too.
+- Verified: 9 services registered, app boots with only the 5 core tabs shown.
