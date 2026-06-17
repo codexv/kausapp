@@ -69,13 +69,3 @@ html.theme-dark,
   --background-color: #1c1c1c !important;
 }
 
-/* FIX (not theming): Telegram promotes the header toolbar to its own GPU layer
-   via `transform: translate3d(0,0,0)` on .header-tools. In our embedded view
-   (offset below the title bar) that composited layer hit-tests offset from where
-   it paints, so the header icons (back / call / search / ⋮) only register a few
-   px below the icon. .header-tools is the ONLY header element with a transform —
-   the chat list, messages, and composer have none, which is exactly why only the
-   header was affected. Dropping the layer-promotion realigns the click area. */
-.header-tools {
-  transform: none !important;
-}
