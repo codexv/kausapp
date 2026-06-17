@@ -60,3 +60,11 @@ html.theme-dark,
   background-color: #1c1c1c !important;
   border-radius: 12px !important;
 }
+
+/* Incoming ("sender") message bubbles pull their fill from var(--color-background)
+   (= #000 above), so they were blending into the black chat. Lift ONLY the
+   incoming bubble tone to dark gray for real contrast. Own (outgoing) bubbles use
+   var(--color-background-own) and keep their accent — untouched. */
+.Message:not(.own) {
+  --background-color: #1c1c1c !important;
+}
