@@ -10,7 +10,15 @@ const { app, dialog } = require('electron');
 let autoUpdater = null;
 let getWin = null;
 let beforeInstall = null; // called right before quitAndInstall (lets main.js allow the quit)
-let manualCheck = false; // true when the user explicitly invoked a check
+// Count of outstanding user-initiated checks. A counter (not a shared boolean)
+// so a background 6h check resolving in the middle can't steal/clear the flag
+// belonging to the user's manual check. Each user-facing terminal event
+// (available / not-available / error) consumes exactly one pending manual check.
+let pendingManualChecks = 0;
+function consumeManualCheck() {
+  if (pendingManualChecks > 0) { pendingManualChecks--; return true; }
+  return false;
+}
 
 function win() {
   return typeof getWin === 'function' ? getWin() : null;
@@ -38,8 +46,7 @@ function load() {
 function wireEvents() {
   autoUpdater.on('update-available', (info) => {
     console.log('[updater] update available:', info && info.version);
-    if (manualCheck) {
-      manualCheck = false;
+    if (consumeManualCheck()) {
       box({
         type: 'info',
         buttons: ['OK'],
@@ -52,8 +59,7 @@ function wireEvents() {
 
   autoUpdater.on('update-not-available', () => {
     console.log('[updater] up to date');
-    if (manualCheck) {
-      manualCheck = false;
+    if (consumeManualCheck()) {
       box({
         type: 'info',
         buttons: ['OK'],
@@ -88,8 +94,7 @@ function wireEvents() {
 
   autoUpdater.on('error', (err) => {
     console.error('[updater] error:', err == null ? 'unknown' : (err.stack || err).toString());
-    if (manualCheck) {
-      manualCheck = false;
+    if (consumeManualCheck()) {
       box({
         type: 'error',
         buttons: ['OK'],
@@ -125,7 +130,7 @@ function checkForUpdates(getWindow) {
     return;
   }
   if (!load()) return;
-  manualCheck = true;
+  pendingManualChecks++;
   autoUpdater.checkForUpdates().catch(() => {});
 }
 

@@ -22,7 +22,7 @@
       --accent-soft: rgba(20, 86, 255, 0.16);
       --badge: #ff3b30;
       --text: #e8eefc;
-      --muted: rgba(255, 255, 255, 0.55);
+      --muted: rgba(255, 255, 255, 0.72);
       /* Radius system: small / medium / large + pill. */
       --r-sm: 8px;
       --r-md: 10px;
@@ -59,7 +59,9 @@
     .services {
       display: flex; align-items: center; gap: 6px;
       -webkit-app-region: no-drag;
+      min-width: 0; flex-shrink: 1; overflow-x: auto; scrollbar-width: none;
     }
+    .services::-webkit-scrollbar { display: none; }
     .spacer { flex: 1 1 auto; }
     .actions { display: flex; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
 
@@ -78,6 +80,7 @@
     .services .btn {
       width: 54px; height: 38px; border-radius: var(--r-sm);
       background: #141417; border: 1px solid var(--border);
+      flex-shrink: 0;
     }
     .services .btn:hover { background: #1c1c20; }
 
@@ -96,7 +99,7 @@
     .ico { width: 24px; height: 24px; border-radius: var(--r-sm); object-fit: cover; pointer-events: none; }
     /* Fallback monogram chip when a favicon hasn't loaded yet. */
     .chip {
-      width: 26px; height: 26px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700; color: #fff; pointer-events: none;
     }
 
@@ -105,7 +108,7 @@
       position: absolute; top: 5px; right: 5px; min-width: 16px; height: 16px; padding: 0 4px;
       border-radius: 999px; background: var(--badge); color: #fff; font-size: 10px; font-weight: 700;
       display: flex; align-items: center; justify-content: center; line-height: 1;
-      box-shadow: 0 0 0 2px #141417; pointer-events: none; /* ring matches the tab container */
+      pointer-events: none;
     }
 
     .sep { width: 1px; height: 26px; background: var(--border); margin: 0 4px; -webkit-app-region: no-drag; }
@@ -162,7 +165,7 @@
   </div>
 
   <nav class="bar">
-    <div class="services" id="services"></div>
+    <div class="services" id="services" role="tablist" aria-label="Services"></div>
     <div class="spacer"></div>
     <div class="actions">
       <div class="brand"><img class="logo hidden" id="brand-logo" alt=""><span class="name">KausApp <span class="ver" id="brand-ver"></span></span></div>
@@ -187,6 +190,8 @@
     var drag = null;            // active drag-reorder state
     var suppressClick = false;  // ignore the click that ends a drag
     var pendingState = null;    // state push deferred while dragging
+    var focusAfterRender = null; // data-id of a tab to re-focus after the next render
+    var prevFailed = false;     // was the active service failed on the previous render?
 
     function initial(name) { return (name || '?').trim().charAt(0).toUpperCase(); }
 
@@ -209,7 +214,10 @@
         btn.dataset.id = svc.id;
         btn.setAttribute('data-tip', svc.name);
         btn.setAttribute('aria-label', svc.name);
-        if (svc.active) btn.setAttribute('aria-current', 'true');
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', svc.active ? 'true' : 'false');
+        btn.setAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+ArrowRight');
+        if (svc.active) btn.setAttribute('aria-current', 'page');
 
         if (svc.favicon) {
           var img = document.createElement('img');
@@ -236,16 +244,48 @@
         btn.addEventListener('pointerdown', function (e) {
           if (e.button === 0) drag = { btn: btn, startX: e.clientX, moved: false };
         });
+        // Keyboard reorder (WCAG 2.1.1): Alt+ArrowLeft / Alt+ArrowRight.
+        btn.addEventListener('keydown', function (e) {
+          if (!e.altKey) return;
+          if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+          var tabs = Array.prototype.slice.call(servicesEl.querySelectorAll('.btn'));
+          var i = tabs.indexOf(btn);
+          var j = e.key === 'ArrowLeft' ? i - 1 : i + 1;
+          if (j < 0 || j >= tabs.length) return; // already at the edge
+          e.preventDefault();
+          // Reorder the DOM, then derive the new id order from it.
+          if (j < i) servicesEl.insertBefore(btn, tabs[j]);
+          else servicesEl.insertBefore(btn, tabs[j].nextSibling);
+          var newOrder = Array.prototype.slice.call(servicesEl.querySelectorAll('.btn'))
+            .map(function (b) { return b.dataset.id; });
+          focusAfterRender = btn.dataset.id; // re-focus this tab once state returns
+          window.shell.reorder(newOrder);
+        });
         servicesEl.appendChild(btn);
       });
 
       // Error overlay for the active service.
-      if (state && state.activeStatus === 'failed') {
+      var failed = !!(state && state.activeStatus === 'failed');
+      if (failed) {
         errTitle.textContent = 'Couldn’t load ' + (state.activeName || 'this service');
         errDetail.textContent = (state.activeError ? state.activeError + '. ' : '') + 'Check your connection and try again.';
         overlay.classList.add('show');
+        // Move focus to Retry only on the transition into the failed state,
+        // not on every state push while already failed.
+        if (!prevFailed) {
+          var retry = document.getElementById('retry');
+          if (retry) retry.focus();
+        }
       } else {
         overlay.classList.remove('show');
+      }
+      prevFailed = failed;
+
+      // Restore focus to a tab that was just reordered via the keyboard.
+      if (focusAfterRender != null) {
+        var toFocus = servicesEl.querySelector('.btn[data-id="' + focusAfterRender + '"]');
+        focusAfterRender = null;
+        if (toFocus) toFocus.focus();
       }
     }
 
@@ -259,7 +299,7 @@
       info = info || {};
       if (info.icon) { brandLogo.src = info.icon; brandLogo.classList.remove('hidden'); }
       else { brandLogo.classList.add('hidden'); }
-      brandVer.textContent = info.version ? 'v' + info.version : '';
+      brandVer.textContent = info.version ? 'v' + String(info.version).replace(/^v/i, '') : '';
     });
 
     // --- Drag-to-reorder the service tabs ---
@@ -292,8 +332,13 @@
         var order = Array.prototype.slice.call(servicesEl.querySelectorAll('.btn'))
           .map(function (b) { return b.dataset.id; });
         window.shell.reorder(order);
+        // The reorder round-trips authoritative state from the main process, so
+        // drop any state deferred mid-drag — rendering it would clobber the
+        // user's manual arrangement with a stale snapshot.
+        pendingState = null;
+      } else if (pendingState) {
+        var s = pendingState; pendingState = null; render(s);
       }
-      if (pendingState) { var s = pendingState; pendingState = null; render(s); }
     });
 
     window.shell.onState(render);

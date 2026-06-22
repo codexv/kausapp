@@ -239,7 +239,14 @@ async function loadStyleCss(name, localPath) {
     const res = await net.fetch(`${REMOTE_STYLE[name]}?t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const css = await res.text();
-      if (css && css.trim()) return css;
+      // Defense-in-depth: this remote CSS is injected (insertCSS) into
+      // authenticated service sessions, so a compromised origin could exfiltrate
+      // data or run code via `background-image: url(...)`, `@import`, IE
+      // `expression()`, or `javascript:` URLs. Our legitimate theme CSS only
+      // sets colors/backgrounds and contains none of these, so if any appear we
+      // treat the fetched text as untrusted and fall back to the bundled copy.
+      // (This does NOT block purely positional/clickjacking CSS.)
+      if (css && css.trim() && !/url\(|@import|expression\(|javascript:/i.test(css)) return css;
     }
   } catch {
     /* offline / fetch failed — fall back to bundled copy */
@@ -349,6 +356,8 @@ function loadWindowState() {
   }
 }
 
+// Immediate disk write. Used by the debounced wrapper and for a final flush on
+// close/quit.
 function saveWindowState() {
   if (!mainWindow || mainWindow.isMinimized()) return;
   try {
@@ -356,6 +365,15 @@ function saveWindowState() {
   } catch {
     /* best-effort */
   }
+}
+
+// Debounced variant: resize/move fire in bursts, so coalesce the disk writes
+// (~400ms) instead of writeFileSync on every tick. The final state is still
+// flushed synchronously on close/before-quit via saveWindowState().
+let saveWindowStateTimer = null;
+function saveWindowStateDebounced() {
+  if (saveWindowStateTimer) clearTimeout(saveWindowStateTimer);
+  saveWindowStateTimer = setTimeout(() => { saveWindowStateTimer = null; saveWindowState(); }, 400);
 }
 
 // Drop a saved x/y that no longer lands on any connected display (e.g. an
@@ -429,7 +447,15 @@ const ALLOWED_PERMISSIONS = new Set([
   'clipboard-read', 'clipboard-sanitized-write', 'fullscreen'
 ]);
 
+// Partitions whose session has already had its permission/download handlers
+// wired. Service views are destroyed/recreated (disable→enable a service), but
+// the persistent session lives on — so without this gate, each recreate would
+// stack another 'will-download' listener (dock bounces N times on one download).
+const configuredPartitions = new Set();
+
 function configureSession(partition) {
+  if (configuredPartitions.has(partition)) return;
+  configuredPartitions.add(partition);
   const ses = session.fromPartition(partition);
   ses.setPermissionRequestHandler((wc, permission, cb) => cb(ALLOWED_PERMISSIONS.has(permission)));
   ses.on('will-download', (event, item) => {
@@ -546,6 +572,8 @@ function makeServiceView(svc) {
 
   wc.on('did-finish-load', () => {
     entry.status = 'ready';
+    // A reload re-fires this handler; clear any prior OLED retry so they can't stack.
+    if (entry.oledRetry) { clearInterval(entry.oledRetry); entry.oledRetry = null; }
     const s = loadSettings();
     wc.setZoomFactor(typeof s.zoomFactor === 'number' ? s.zoomFactor : DEFAULT_ZOOM);
 
@@ -564,9 +592,9 @@ function makeServiceView(svc) {
         // Dark styling can settle after load (SPA); a fresh launch may show the
         // light login page first. Retry the dark-guarded apply briefly.
         let tries = 0;
-        const t = setInterval(() => {
+        entry.oledRetry = setInterval(() => {
           if (cssKeys[`oled:${svc.id}`] != null || ++tries > 8 || !views.get(svc.id) || !loadSettings().oledTheme) {
-            clearInterval(t);
+            if (entry.oledRetry) { clearInterval(entry.oledRetry); entry.oledRetry = null; }
             return;
           }
           applyOledToService(svc, true);
@@ -593,6 +621,10 @@ function ensureServiceViews() {
   const wantedIds = new Set(wanted.map((s) => s.id));
   for (const [id, entry] of [...views]) {
     if (!wantedIds.has(id)) {
+      if (entry.oledRetry) { clearInterval(entry.oledRetry); entry.oledRetry = null; }
+      // Don't leave activeId dangling at a destroyed view; the reassignment
+      // below picks a valid active service.
+      if (id === activeId) activeId = null;
       try { mainWindow.contentView.removeChildView(entry.view); } catch { /* */ }
       try { entry.view.webContents.destroy(); } catch { /* */ }
       views.delete(id);
@@ -763,8 +795,8 @@ function createWindow() {
     if (!url.startsWith('file://')) { event.preventDefault(); openExternal(url); }
   });
 
-  mainWindow.on('resize', () => { layout(); saveWindowState(); });
-  mainWindow.on('move', saveWindowState);
+  mainWindow.on('resize', () => { layout(); saveWindowStateDebounced(); });
+  mainWindow.on('move', saveWindowStateDebounced);
 
   mainWindow.on('close', (event) => {
     if (!isQuitting && process.platform === 'darwin') {
@@ -860,7 +892,7 @@ function buildMenu() {
         { type: 'separator' },
         {
           label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus',
-          click: () => { const wc = activeWc(); if (wc) { const z = wc.getZoomFactor() + 0.1; wc.setZoomFactor(z); saveSettings({ zoomFactor: z }); } }
+          click: () => { const wc = activeWc(); if (wc) { const z = Math.min(2, wc.getZoomFactor() + 0.1); wc.setZoomFactor(z); saveSettings({ zoomFactor: z }); } }
         },
         {
           label: 'Zoom Out', accelerator: 'CmdOrCtrl+-',
@@ -1153,7 +1185,7 @@ function registerShellIpc() {
     if (name === 'check-updates') checkForUpdates(() => mainWindow);
     else if (name === 'report-bug') openBugReport();
     else if (name === 'diagnostics') sendThemeDiagnostics();
-    else if (name === 'open-url' && msg.arg) shell.openExternal(String(msg.arg));
+    else if (name === 'open-url' && msg.arg) openExternal(String(msg.arg));
     return { ok: true };
   });
 

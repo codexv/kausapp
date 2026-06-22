@@ -28,7 +28,7 @@
       display: flex; align-items: center; gap: 12px;
       padding: 16px 20px; border-bottom: 1px solid var(--border);
     }
-    header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; flex: 1; }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; flex: 1; }
     .close {
       width: 32px; height: 32px; border-radius: var(--r-sm); border: none; background: transparent;
       color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
@@ -98,6 +98,8 @@
     }
     .stepper button:hover { border-color: var(--accent); }
     .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .stepper button:disabled { opacity: 0.3; cursor: default; }
+    .stepper button:disabled:hover { border-color: var(--border); }
     .stepper .val { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 
     .btn-line { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -218,6 +220,9 @@
       });
     });
 
+    // Establish roving tabindex + active panel immediately, independent of async load().
+    selectTab('appearance');
+
     document.getElementById('close').addEventListener('click', function () { window.settingsApi.close(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') window.settingsApi.close(); });
 
@@ -289,10 +294,17 @@
       window.settingsApi.patch({ launchAtLogin: e.target.checked });
     });
 
+    function updateZoomButtons(z) {
+      var zo = document.getElementById('zoom-out');
+      var zi = document.getElementById('zoom-in');
+      if (z <= 0.5) zo.setAttribute('disabled', ''); else zo.removeAttribute('disabled');
+      if (z >= 2.0) zi.setAttribute('disabled', ''); else zi.removeAttribute('disabled');
+    }
     function setZoom(z) {
       z = Math.min(2, Math.max(0.5, Math.round(z * 10) / 10));
       STATE.settings.zoomFactor = z;
       document.getElementById('zoom-val').textContent = pct(z);
+      updateZoomButtons(z);
       window.settingsApi.patch({ zoomFactor: z });
     }
     document.getElementById('zoom-in').addEventListener('click', function () { setZoom(STATE.settings.zoomFactor + 0.1); });
@@ -301,8 +313,16 @@
     document.getElementById('check-updates').addEventListener('click', function () { window.settingsApi.action('check-updates'); });
     document.getElementById('report-bug').addEventListener('click', function () { window.settingsApi.action('report-bug'); });
     document.getElementById('diagnostics').addEventListener('click', function () { window.settingsApi.action('diagnostics'); });
-    document.getElementById('site').addEventListener('click', function () { window.settingsApi.action('open-url', 'https://kausapp.com'); });
-    document.getElementById('notes').addEventListener('click', function () { window.settingsApi.action('open-url', 'https://github.com/codexv/kausapp/releases'); });
+    // role="link" elements have no native keyboard activation; wire Enter/Space.
+    function linkActivate(el, url) {
+      function go() { window.settingsApi.action('open-url', url); }
+      el.addEventListener('click', go);
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); go(); }
+      });
+    }
+    linkActivate(document.getElementById('site'), 'https://kausapp.com');
+    linkActivate(document.getElementById('notes'), 'https://github.com/codexv/kausapp/releases');
 
     window.settingsApi.onFocusTab(function (tab) { if (tab) selectTab(tab); });
 
@@ -313,6 +333,7 @@
         document.getElementById('compact').checked = STATE.settings.compactSidebar;
         document.getElementById('login').checked = STATE.settings.launchAtLogin;
         document.getElementById('zoom-val').textContent = pct(STATE.settings.zoomFactor);
+        updateZoomButtons(STATE.settings.zoomFactor);
         document.getElementById('ver').textContent = 'KausApp v' + STATE.version;
         renderServices();
         selectTab('appearance');

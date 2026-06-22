@@ -924,3 +924,45 @@ container for the whole group), and a bit wider.
   serviceOrder (dragged enabled order + remaining ids appended) + pushState.
   shell-preload exposes `reorder`. Settings ↑↓ reorder still works too.
 - Verified: 9 services registered, app boots with only the 5 core tabs shown.
+
+---
+
+## 2026-06-22 — Multi-agent security + UX audit, then parallel fixes → v0.2.13
+
+Ran 4 parallel read-only audit agents (Electron security / backend security /
+main-process correctness / UX-a11y), consolidated findings (no Critical, no RCE),
+then 4 parallel fix agents on disjoint files. Snapshot: backups/audit-fixes-*.
+
+App (ships in v0.2.13):
+- main.js: will-download listener leak fixed (configure session once per
+  partition); OLED retry setInterval tracked on entry + cleared on reload/destroy;
+  saveWindowState debounced (400ms) + flush on quit; open-url routed through the
+  http/https/mailto allow-list; menu Zoom In clamped to 2.0; activeId cleared when
+  its view is destroyed; **hosted-CSS sanitized** before insertCSS (reject
+  url()/@import/expression/javascript: → bundled fallback) — integrity guard for
+  CSS injected into authenticated sessions.
+- updater.js: manualCheck boolean → counter so a background 6h check can't steal/
+  suppress the user's manual update dialog.
+- shell.html: mid-drag stale-order race fixed; muted contrast → 0.72 (AA); badge
+  ring removed; chip sized 24px; "vv" version guard; error overlay focuses Retry;
+  bottom bar now role=tablist + aria-selected/aria-current=page; **Alt+←/→ keyboard
+  reorder** (WCAG 2.1.1); tab overflow → horizontal scroll.
+- settings.html: h1 700; zoom buttons disable at clamps; about-links keyboard-
+  activatable; roving tabindex set synchronously. (emoji→SVG icons skipped.)
+- report.html: focus-visible rings; Esc-to-close; status role=status/aria-live;
+  counter aria-live + near-limit cue; screenshot empty-state (disable + message,
+  gate includeScreenshot); accent/radii unified to #1456ff + tokens.
+
+Backend (Cloudflare deploy + droplet):
+- reports.js: constant-time secret compare (SHA-256 digest XOR); secret no longer
+  accepted via URL query string (header/body only).
+- report.js: version/platform capped 64; kind allowlisted; global daily write
+  ceiling (2000/day).
+- subscribe.js: per-IP/day rate limit (30/day).
+- admin/server.py: stop sending secret in URL (header-only); Origin/Referer CSRF
+  check on /delete. **Requires manual droplet redeploy** (repo copy only).
+
+Left as accepted/known (per audit): unsigned Win/Linux auto-update (needs certs);
+diagnostics/screenshot retention (consent is good; no TTL/policy yet); blanket
+clipboard-read permission; hosted-CSS positional-clickjacking residual (url-exfil
+now blocked). Also untracked a stray committed admin/__pycache__/*.pyc + gitignored.
