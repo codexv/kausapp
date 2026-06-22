@@ -28,12 +28,21 @@ export async function onRequestPost(context) {
   // consistent so this is a soft limit, but it stops a single client from
   // flooding the namespace. No-op if the IP header is absent.
   const ip = request.headers.get('cf-connecting-ip') || '';
+  const day = new Date().toISOString().slice(0, 10);
   if (ip) {
-    const day = new Date().toISOString().slice(0, 10);
     const rlKey = `rl:${day}:${ip}`;
     const count = parseInt((await env.REPORTS.get(rlKey)) || '0', 10) || 0;
     if (count >= 20) return json({ ok: false, error: 'rate_limited' }, 429);
     await env.REPORTS.put(rlKey, String(count + 1), { expirationTtl: 86400 });
+  }
+
+  // Global daily write ceiling: bounds total KV growth even under distributed
+  // flooding from many IPs. High cap so it never trips on legitimate traffic.
+  {
+    const gKey = `rl:${day}:_global`;
+    const gCount = parseInt((await env.REPORTS.get(gKey)) || '0', 10) || 0;
+    if (gCount >= 2000) return json({ ok: false, error: 'rate_limited' }, 429);
+    await env.REPORTS.put(gKey, String(gCount + 1), { expirationTtl: 86400 });
   }
 
   // Cap screenshot size (~6MB data URL) to stay well under KV's value limit.
@@ -47,7 +56,9 @@ export async function onRequestPost(context) {
   const diagnostics = typeof data.diagnostics === 'string'
     ? data.diagnostics.slice(0, 200_000)
     : '';
-  const kind = String((data && data.kind) || 'bug').slice(0, 32);
+  // Coerce kind to a known value; anything unexpected falls back to 'bug'.
+  const kindRaw = String((data && data.kind) || 'bug');
+  const kind = ['bug', 'diagnostics'].includes(kindRaw) ? kindRaw : 'bug';
 
   const ts = new Date().toISOString();
   const id = `report:${ts}-${crypto.randomUUID()}`;
@@ -56,8 +67,8 @@ export async function onRequestPost(context) {
     diagnostics,
     kind,
     screenshot,
-    version: String((data && data.version) || ''),
-    platform: String((data && data.platform) || ''),
+    version: String((data && data.version) || '').slice(0, 64),
+    platform: String((data && data.platform) || '').slice(0, 64),
     ua: request.headers.get('user-agent') || '',
     country: request.headers.get('cf-ipcountry') || '',
     ts

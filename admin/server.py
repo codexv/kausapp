@@ -37,8 +37,9 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chr
 
 
 def fetch_reports():
-    url = f"{REPORTS_API}?key={urllib.parse.quote(ADMIN_SECRET)}"
-    req = urllib.request.Request(url, headers={"X-Admin-Secret": ADMIN_SECRET, "User-Agent": UA})
+    # Secret travels only in the X-Admin-Secret header, never the URL (which
+    # would leak it into proxy/access logs and shell history).
+    req = urllib.request.Request(REPORTS_API, headers={"X-Admin-Secret": ADMIN_SECRET, "User-Agent": UA})
     with urllib.request.urlopen(req, timeout=20) as r:
         data = json.loads(r.read().decode())
     if not data.get("ok"):
@@ -166,8 +167,22 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, "not found", "text/plain")
 
+    def _origin_ok(self):
+        # CSRF guard: a legitimate delete is submitted from the admin page
+        # itself, so its Origin/Referer host must match the admin host. Cross-
+        # site forged POSTs send a foreign (or no) Origin and are rejected.
+        allowed = os.environ.get("ADMIN_HOST", "") or (self.headers.get("Host") or "").split(":")[0] or "admin.kausapp.com"
+        src = self.headers.get("Origin") or self.headers.get("Referer") or ""
+        if not src:
+            return False
+        host = urllib.parse.urlsplit(src).hostname or ""
+        return host == allowed.split(":")[0]
+
     def do_POST(self):
         if self.path == "/delete":
+            if not self._origin_ok():
+                self._send(403, "forbidden", "text/plain")
+                return
             length = int(self.headers.get("Content-Length", "0"))
             form = urllib.parse.parse_qs(self.rfile.read(length).decode())
             key = (form.get("key") or [""])[0]

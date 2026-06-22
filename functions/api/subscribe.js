@@ -37,6 +37,18 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: 'invalid_email' }, 400);
   }
 
+  // Lightweight abuse guard: cap signups per IP per UTC day to bound KV growth
+  // via flooding. Counter key is namespaced (rl:sub:*) so it never collides
+  // with sub:* subscriber records. No-op if the IP header is absent.
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  if (ip) {
+    const day = new Date().toISOString().slice(0, 10);
+    const rlKey = `rl:sub:${day}:${ip}`;
+    const count = parseInt((await env.SUBSCRIBERS.get(rlKey)) || '0', 10) || 0;
+    if (count >= 30) return json({ ok: false, error: 'rate_limited' }, 429);
+    await env.SUBSCRIBERS.put(rlKey, String(count + 1), { expirationTtl: 86400 });
+  }
+
   const record = {
     email,
     ts: new Date().toISOString(),

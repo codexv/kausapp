@@ -12,3 +12,7 @@ assets/icon.iconset/
 
 # Wrangler local cache
 .wrangler/
+
+# Python bytecode cache
+__pycache__/
+*.pyc
